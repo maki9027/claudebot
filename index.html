@@ -461,14 +461,18 @@
     try {
       const raw = localStorage.getItem('ev_' + org);
       if (!raw) return null;
-      const { events, ts } = JSON.parse(raw);
-      if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem('ev_' + org); return null; }
+      const { events, ts, url } = JSON.parse(raw);
+      // URL変更時またはTTL超過時はキャッシュ無効
+      if (url !== ORG_SOURCES[org] || Date.now() - ts > CACHE_TTL) {
+        localStorage.removeItem('ev_' + org);
+        return null;
+      }
       return events;
     } catch { return null; }
   }
 
   function saveToStorage(org, events) {
-    try { localStorage.setItem('ev_' + org, JSON.stringify({ events, ts: Date.now() })); } catch {}
+    try { localStorage.setItem('ev_' + org, JSON.stringify({ events, ts: Date.now(), url: ORG_SOURCES[org] })); } catch {}
   }
 
   // タイトル→画像URL のマッピングをlocalStorageで管理
