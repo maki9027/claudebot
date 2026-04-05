@@ -562,7 +562,7 @@
 
   // --- 団体別イベント取得設定 ---
   const ORG_SOURCES = {
-    'SCRAP':      'https://api.scrapmagazine.com/public/api/2/events',
+    'SCRAP':      'https://api.scrapmagazine.com/public/api/2/events?_v=2',
     'Tumbleweed': 'https://tumbleweed.jp/event/ongoing/',
     'Far&Near':   'https://farnear.jp/index.html',
     'XEOXY':      'https://www.xeoxy.com/events',
@@ -708,7 +708,7 @@
         .filter(e => e.place_pref && e.place_pref.startsWith('東京') && (!e.ends_on || e.ends_on >= today))
         .map(e => ({
           title: (e.event_name || '').replace(/^【[^】]+】/, '').trim(),
-          imageUrl: e.thumbnail_url || e.image_url || null,
+          imageUrl: e.event_image || null,
         }))
         .filter(e => e.title.length >= 2);
     },
