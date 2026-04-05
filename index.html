@@ -782,13 +782,23 @@
         raw = JSON.parse(d.contents);
       }
       const items = Array.isArray(raw) ? raw : (raw.events || raw.data || []);
+      const seen = new Set();
       return items
         .filter(e => e.place_pref && e.place_pref.startsWith('東京') && (!e.ends_on || e.ends_on >= today))
         .map(e => ({
-          title: (e.event_name || '').replace(/^【[^】]+】/, '').trim(),
+          title: (e.event_name || '')
+            .replace(/^【[^】]+】/, '')
+            .replace(/^リアル脱出ゲーム[『「\s]*/, '')
+            .trim(),
           imageUrl: e.event_image || null,
         }))
-        .filter(e => e.title.length >= 2);
+        .filter(e => {
+          if (e.title.length < 2) return false;
+          const key = e.title.slice(0, 15);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
     },
   };
 
