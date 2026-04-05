@@ -185,7 +185,10 @@
       .main { padding: 10px; }
       .form-card { padding: 16px 14px; }
       .form-row-date { grid-template-columns: 1fr; }
+      .date-full { display: none; }
+      .date-short { display: flex !important; }
     }
+    .date-short { display: none; }
     .btn {
       background: linear-gradient(135deg, #ff8ec8, #c77dff);
       color: white;
@@ -539,7 +542,8 @@
               ${r.cleared ? '<span class="badge cleared">✅ 成功</span>' : '<span class="badge failed">❌ 失敗</span>'}
             </div>
             <div class="meta">
-              <span>📅 ${r.played_at || ''}</span>
+              <span class="date-full">📅 ${r.played_at || ''}</span>
+              <span class="date-short">📅 ${r.played_at ? r.played_at.slice(5).replace('-','/') : ''}</span>
               ${r.location ? `<span>📍 ${escHtml(r.location)}</span>` : ''}
               ${r.difficulty ? `<span>⭐ 難易度 ${r.difficulty}</span>` : ''}
             </div>
