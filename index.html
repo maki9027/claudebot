@@ -139,11 +139,13 @@
     @media (max-width: 480px) {
       .form-row-date { grid-template-columns: 1fr; }
       input[type="date"] {
-        font-size: 0.78rem;
-        padding: 9px 6px;
+        font-size: 0.7rem;
+        padding: 8px 4px;
         min-width: 0;
         max-width: 100%;
+        overflow: hidden;
       }
+      .form-row-date .form-group { overflow: hidden; }
     }
     .btn {
       background: linear-gradient(135deg, #ff8ec8, #c77dff);
