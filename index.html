@@ -378,7 +378,7 @@
     'Tumbleweed': 'https://tumbleweed.jp/event/ongoing/',
     'Far&Near':   'https://farnear.jp/index.html',
     'XEOXY':      'https://www.xeoxy.com/events',
-    'takarush BLACK LABEL': 'https://huntersvillage.jp/blacklabel/#search_menu',
+    'takarush BLACK LABEL': 'https://nazohiroba.com/mysteries?pfi=13,14&cti=01&mkr=%E3%82%BF%E3%82%AB%E3%83%A9%E3%83%83%E3%82%B7%E3%83%A5',
   };
   const eventCache = {}; // { org: Promise<string[]> } — Promiseで管理して並行fetch防止
 
@@ -410,7 +410,8 @@
     const seen = new Set();
     const events = [];
     const selectors = [
-      '[class*="event-title"]','[class*="event-name"]','[class*="eventTitle"]','[class*="eventName"]',
+      '[class*="mystery-title"]','[class*="mystery-name"]','[class*="event-title"]','[class*="event-name"]',
+      '[class*="eventTitle"]','[class*="eventName"]','.mystery h3','.mystery h2',
       'article h2','article h3','article h4','.card h2','.card h3','.card h4',
       'h2','h3','h4','[class*="title"]',
     ];
@@ -418,7 +419,9 @@
     const isNavText = t =>
       BLOCKLIST.includes(t.toUpperCase()) ||
       t.includes('を探す') || t.includes('メニュー') ||
-      t.includes('ナビ') || t.includes('トップページ') || t.includes('ページトップ');
+      t.includes('ナビ') || t.includes('トップページ') || t.includes('ページトップ') ||
+      t.includes('ランキング') || t.includes('おすすめ') || t.includes('新着') ||
+      t.includes('一覧') || t.includes('検索結果');
 
     for (const sel of selectors) {
       doc.querySelectorAll(sel).forEach(el => {
