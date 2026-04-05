@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>謎解きイベント管理</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #e0e0f0;
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, #1a1a3e, #2d1b69);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 12px rgba(100,60,200,0.4);
+    }
+    header h1 { font-size: 1.4rem; letter-spacing: 0.05em; }
+    header span { font-size: 1.8rem; }
+
+    .tabs {
+      display: flex;
+      background: #13132a;
+      border-bottom: 1px solid #2a2a4a;
+    }
+    .tab {
+      flex: 1;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: #888;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      color: #a78bfa;
+      border-bottom-color: #a78bfa;
+      background: #1a1a35;
+    }
+    .tab:hover:not(.active) { background: #1a1a30; color: #ccc; }
+
+    .page { display: none; padding: 20px; max-width: 700px; margin: 0 auto; }
+    .page.active { display: block; }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #1a1a35;
+      border: 1px solid #2a2a50;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-card .num { font-size: 2rem; font-weight: bold; color: #a78bfa; }
+    .stat-card .label { font-size: 0.75rem; color: #888; margin-top: 4px; }
+
+    /* Records */
+    .record-card {
+      background: #1a1a35;
+      border: 1px solid #2a2a50;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .record-card .title { font-size: 1rem; font-weight: bold; margin-bottom: 6px; }
+    .record-card .meta { font-size: 0.8rem; color: #888; display: flex; flex-wrap: wrap; gap: 10px; }
+    .record-card .meta span { display: flex; align-items: center; gap: 4px; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      margin-left: 8px;
+    }
+    .badge.cleared { background: #1e4d2b; color: #4ade80; }
+    .badge.failed { background: #4d1e1e; color: #f87171; }
+    .delete-btn {
+      position: absolute;
+      top: 12px; right: 12px;
+      background: none;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .delete-btn:hover { color: #f87171; background: #2a1a1a; }
+
+    /* Form */
+    .form-card {
+      background: #1a1a35;
+      border: 1px solid #2a2a50;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 0.8rem; color: #aaa; margin-bottom: 5px; }
+    input, select, textarea {
+      width: 100%;
+      background: #0f0f22;
+      border: 1px solid #2a2a50;
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #e0e0f0;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #a78bfa; }
+    select option { background: #1a1a35; }
+    textarea { resize: vertical; min-height: 70px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btn {
+      background: linear-gradient(135deg, #6d28d9, #a855f7);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 4px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+
+    /* Stars */
+    .stars { color: #f59e0b; letter-spacing: 2px; }
+
+    /* Search */
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .search-bar input { flex: 1; }
+    .search-bar button {
+      background: linear-gradient(135deg, #6d28d9, #a855f7);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    .search-bar button:hover { opacity: 0.85; }
+    .event-card {
+      background: #1a1a35;
+      border: 1px solid #2a2a50;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .event-card .etitle { font-size: 0.95rem; font-weight: bold; margin-bottom: 6px; }
+    .event-card .emeta { font-size: 0.78rem; color: #888; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .event-card a {
+      display: inline-block;
+      font-size: 0.8rem;
+      color: #a78bfa;
+      text-decoration: none;
+      border: 1px solid #5b21b6;
+      border-radius: 6px;
+      padding: 3px 10px;
+    }
+    .event-card a:hover { background: #2d1b69; }
+    .loading { text-align: center; color: #888; padding: 30px; }
+    .no-data { text-align: center; color: #555; padding: 40px; font-size: 0.9rem; }
+    .section-title {
+      font-size: 0.85rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+    .difficulty-bar {
+      height: 4px;
+      background: #2a2a50;
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .difficulty-bar .fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6d28d9, #a855f7);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>🔍</span>
+  <h1>謎解きイベント管理</h1>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('home')">📊 ホーム</div>
+  <div class="tab" onclick="switchTab('add')">✏️ 記録</div>
+  <div class="tab" onclick="switchTab('search')">🔎 検索</div>
+</div>
+
+<!-- ホーム -->
+<div class="page active" id="page-home">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="num" id="stat-total">0</div>
+      <div class="label">参加イベント数</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="stat-cleared">0</div>
+      <div class="label">クリア数</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="stat-rate">0%</div>
+      <div class="label">クリア率</div>
+    </div>
+  </div>
+
+  <div class="section-title">最近の記録</div>
+  <div id="recent-list"></div>
+</div>
+
+<!-- 記録追加 -->
+<div class="page" id="page-add">
+  <div class="form-card">
+    <div class="form-group">
+      <label>イベント名 *</label>
+      <input type="text" id="f-name" placeholder="例: 謎解きの館 〜失われた鍵〜">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>開催日 *</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="form-group">
+        <label>場所</label>
+        <input type="text" id="f-place" placeholder="例: 東京・新宿">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>難易度 (1〜5)</label>
+        <select id="f-difficulty">
+          <option value="1">★☆☆☆☆ やさしい</option>
+          <option value="2">★★☆☆☆ 初級</option>
+          <option value="3" selected>★★★☆☆ 中級</option>
+          <option value="4">★★★★☆ 上級</option>
+          <option value="5">★★★★★ 激難</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>結果</label>
+        <select id="f-result">
+          <option value="cleared">クリア ✅</option>
+          <option value="failed">未クリア ❌</option>
+          <option value="unknown">不明</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>クリアタイム（分）</label>
+      <input type="number" id="f-time" placeholder="例: 55" min="0">
+    </div>
+    <div class="form-group">
+      <label>感想・メモ</label>
+      <textarea id="f-note" placeholder="難しかった謎、印象に残ったことなど..."></textarea>
+    </div>
+    <button class="btn" onclick="saveRecord()">記録を保存</button>
+  </div>
+</div>
+
+<!-- イベント検索 -->
+<div class="page" id="page-search">
+  <div class="search-bar">
+    <input type="text" id="search-kw" placeholder="キーワード（例: 謎解き 東京）" value="謎解き">
+    <button onclick="searchEvents()">検索</button>
+  </div>
+  <div id="search-results"><div class="no-data">キーワードを入力して検索してください</div></div>
+</div>
+
+<script>
+  // --- Data ---
+  function getRecords() {
+    return JSON.parse(localStorage.getItem('nazotoki_records') || '[]');
+  }
+  function saveRecords(list) {
+    localStorage.setItem('nazotoki_records', JSON.stringify(list));
+  }
+
+  // --- Tabs ---
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['home','add','search'][i] === name);
+    });
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    if (name === 'home') renderHome();
+  }
+
+  // --- Home ---
+  function renderHome() {
+    const records = getRecords();
+    const cleared = records.filter(r => r.result === 'cleared').length;
+    document.getElementById('stat-total').textContent = records.length;
+    document.getElementById('stat-cleared').textContent = cleared;
+    document.getElementById('stat-rate').textContent =
+      records.length ? Math.round(cleared / records.length * 100) + '%' : '0%';
+
+    const list = document.getElementById('recent-list');
+    if (!records.length) {
+      list.innerHTML = '<div class="no-data">まだ記録がありません。<br>「記録」タブから追加してみましょう！</div>';
+      return;
+    }
+    const sorted = [...records].reverse().slice(0, 20);
+    list.innerHTML = sorted.map(r => `
+      <div class="record-card">
+        <div class="title">
+          ${escHtml(r.name)}
+          ${r.result === 'cleared' ? '<span class="badge cleared">クリア</span>' : r.result === 'failed' ? '<span class="badge failed">未クリア</span>' : ''}
+        </div>
+        <div class="meta">
+          <span>📅 ${r.date}</span>
+          ${r.place ? `<span>📍 ${escHtml(r.place)}</span>` : ''}
+          ${r.time ? `<span>⏱ ${r.time}分</span>` : ''}
+        </div>
+        <div class="difficulty-bar"><div class="fill" style="width:${r.difficulty*20}%"></div></div>
+        ${r.note ? `<div style="margin-top:8px;font-size:0.82rem;color:#aaa;">${escHtml(r.note)}</div>` : ''}
+        <button class="delete-btn" onclick="deleteRecord('${r.id}')" title="削除">✕</button>
+      </div>
+    `).join('');
+  }
+
+  // --- Add Record ---
+  function saveRecord() {
+    const name = document.getElementById('f-name').value.trim();
+    const date = document.getElementById('f-date').value;
+    if (!name || !date) { alert('イベント名と開催日は必須です'); return; }
+    const record = {
+      id: Date.now().toString(),
+      name,
+      date,
+      place: document.getElementById('f-place').value.trim(),
+      difficulty: parseInt(document.getElementById('f-difficulty').value),
+      result: document.getElementById('f-result').value,
+      time: document.getElementById('f-time').value || '',
+      note: document.getElementById('f-note').value.trim(),
+    };
+    const records = getRecords();
+    records.push(record);
+    saveRecords(records);
+    // reset
+    ['f-name','f-place','f-time','f-note'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-difficulty').value = '3';
+    document.getElementById('f-result').value = 'cleared';
+    alert('記録を保存しました！');
+    switchTab('home');
+  }
+
+  function deleteRecord(id) {
+    if (!confirm('この記録を削除しますか？')) return;
+    saveRecords(getRecords().filter(r => r.id !== id));
+    renderHome();
+  }
+
+  // --- Search (connpass) ---
+  async function searchEvents() {
+    const kw = document.getElementById('search-kw').value.trim() || '謎解き';
+    const container = document.getElementById('search-results');
+    container.innerHTML = '<div class="loading">検索中...</div>';
+    try {
+      const url = `https://connpass.com/api/v2/events/?keyword=${encodeURIComponent(kw)}&count=20&order=2`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('API error');
+      const data = await res.json();
+      const events = data.events || [];
+      if (!events.length) {
+        container.innerHTML = '<div class="no-data">イベントが見つかりませんでした</div>';
+        return;
+      }
+      container.innerHTML = events.map(e => {
+        const date = e.started_at ? e.started_at.slice(0, 10) : '日時未定';
+        const place = e.address || e.place || 'オンライン';
+        const accepted = e.accepted || 0;
+        const limit = e.limit || '定員なし';
+        return `
+          <div class="event-card">
+            <div class="etitle">${escHtml(e.title)}</div>
+            <div class="emeta">
+              <span>📅 ${date}</span>
+              <span>📍 ${escHtml(place)}</span>
+              <span>👥 ${accepted}/${limit}人</span>
+            </div>
+            <a href="${e.event_url}" target="_blank" rel="noopener">詳細を見る →</a>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      container.innerHTML = '<div class="no-data">検索中にエラーが発生しました。<br>しばらくしてから再試行してください。</div>';
+    }
+  }
+
+  function escHtml(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Init
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  renderHome();
+</script>
+</body>
+</html>
