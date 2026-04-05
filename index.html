@@ -347,22 +347,29 @@
       return;
     }
 
-    list.innerHTML = records.map(r => `
+    list.innerHTML = records.map(r => {
+      const imgUrl = getImageUrl(r.title);
+      return `
       <div class="record-card">
-        <div class="title">
-          ${escHtml(r.title)}
-          ${r.cleared ? '<span class="badge cleared">✅ 成功</span>' : '<span class="badge failed">❌ 失敗</span>'}
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="flex:1;min-width:0;">
+            <div class="title">
+              ${escHtml(r.title)}
+              ${r.cleared ? '<span class="badge cleared">✅ 成功</span>' : '<span class="badge failed">❌ 失敗</span>'}
+            </div>
+            <div class="meta">
+              <span>📅 ${r.played_at || ''}</span>
+              ${r.location ? `<span>📍 ${escHtml(r.location)}</span>` : ''}
+              ${r.difficulty ? `<span>⭐ 難易度 ${r.difficulty}</span>` : ''}
+            </div>
+            <div class="difficulty-bar"><div class="fill" style="width:${(r.difficulty||0)*20}%"></div></div>
+            ${r.impression ? `<div style="margin-top:9px;font-size:0.82rem;color:#a080b0;">${escHtml(r.impression)}</div>` : ''}
+          </div>
+          ${imgUrl ? `<img src="${escHtml(imgUrl)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;flex-shrink:0;border:2px solid #ffd6ef;">` : ''}
         </div>
-        <div class="meta">
-          <span>📅 ${r.played_at || ''}</span>
-          ${r.location ? `<span>📍 ${escHtml(r.location)}</span>` : ''}
-          ${r.difficulty ? `<span>⭐ 難易度 ${r.difficulty}</span>` : ''}
-        </div>
-        <div class="difficulty-bar"><div class="fill" style="width:${(r.difficulty||0)*20}%"></div></div>
-        ${r.impression ? `<div style="margin-top:9px;font-size:0.82rem;color:#a080b0;">${escHtml(r.impression)}</div>` : ''}
         <button class="delete-btn" onclick="deleteRecord('${r.id}')" title="削除">✕</button>
       </div>
-    `).join('');
+    `}).join('');
   }
 
   // --- 団体別イベント取得設定 ---
@@ -389,34 +396,46 @@
     ]);
   }
 
-  function parseEventTitles(html) {
+  function resolveUrl(src, base) {
+    if (!src || src.startsWith('data:')) return null;
+    if (src.startsWith('http')) return src;
+    if (src.startsWith('//')) return 'https:' + src;
+    try { return new URL(src, base).href; } catch { return null; }
+  }
+
+  function parseEvents(html, baseUrl) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const seen = new Set();
-    const titles = [];
+    const events = [];
     const selectors = [
       '[class*="event-title"]','[class*="event-name"]','[class*="eventTitle"]','[class*="eventName"]',
       'article h2','article h3','article h4','.card h2','.card h3','.card h4',
       'h2','h3','h4','[class*="title"]',
     ];
-    // UI要素として除外するパターン（イベント名になりうる全大文字は除外しない）
     const BLOCKLIST = ['HEADLINE', 'TOPICS', 'EVENT', 'NEWS', 'INFORMATION', 'ABOUT', 'ACCESS', 'CONTACT', 'HOME', 'MENU'];
     const isNavText = t =>
       BLOCKLIST.includes(t.toUpperCase()) ||
-      t.includes('を探す') ||
-      t.includes('メニュー') ||
-      t.includes('ナビ') ||
-      t.includes('トップページ') ||
-      t.includes('ページトップ');
+      t.includes('を探す') || t.includes('メニュー') ||
+      t.includes('ナビ') || t.includes('トップページ') || t.includes('ページトップ');
+
     for (const sel of selectors) {
       doc.querySelectorAll(sel).forEach(el => {
         const t = el.textContent.trim().replace(/\s+/g, ' ');
         if (t.length >= 2 && t.length <= 100 && !seen.has(t) && !isNavText(t)) {
           seen.add(t);
-          titles.push(t);
+          // 近くのコンテナからimg取得
+          let imageUrl = null;
+          let container = el.parentElement;
+          for (let i = 0; i < 5 && container; i++) {
+            const img = container.querySelector('img[src]');
+            if (img) { imageUrl = resolveUrl(img.getAttribute('src'), baseUrl); break; }
+            container = container.parentElement;
+          }
+          events.push({ title: t, imageUrl });
         }
       });
     }
-    return titles;
+    return events;
   }
 
   const CACHE_TTL = 6 * 60 * 60 * 1000; // 6時間
@@ -425,19 +444,36 @@
     try {
       const raw = localStorage.getItem('ev_' + org);
       if (!raw) return null;
-      const { titles, ts } = JSON.parse(raw);
+      const { events, ts } = JSON.parse(raw);
       if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem('ev_' + org); return null; }
-      return titles;
+      return events;
     } catch { return null; }
   }
 
-  function saveToStorage(org, titles) {
-    try { localStorage.setItem('ev_' + org, JSON.stringify({ titles, ts: Date.now() })); } catch {}
+  function saveToStorage(org, events) {
+    try { localStorage.setItem('ev_' + org, JSON.stringify({ events, ts: Date.now() })); } catch {}
+  }
+
+  // タイトル→画像URL のマッピングをlocalStorageで管理
+  function saveImageUrl(eventName, imageUrl) {
+    if (!imageUrl) return;
+    try {
+      const map = JSON.parse(localStorage.getItem('ev_images') || '{}');
+      map[eventName] = imageUrl;
+      localStorage.setItem('ev_images', JSON.stringify(map));
+    } catch {}
+  }
+
+  function getImageUrl(recordTitle) {
+    try {
+      const map = JSON.parse(localStorage.getItem('ev_images') || '{}');
+      const eventName = recordTitle.replace(/^【[^】]+】/, '');
+      return map[eventName] || null;
+    } catch { return null; }
   }
 
   async function fetchOrgEvents(org) {
     if (!eventCache[org]) {
-      // まずlocalStorageから即座に返す
       const cached = loadFromStorage(org);
       if (cached) { eventCache[org] = Promise.resolve(cached); return eventCache[org]; }
 
@@ -445,11 +481,13 @@
         document.getElementById('suggestions').innerHTML = '<div class="suggestion-loading">イベントを取得中...</div>';
         try {
           const html = await fetchHtml(ORG_SOURCES[org]);
-          const titles = parseEventTitles(html);
-          saveToStorage(org, titles);
-          console.log('[' + org + '] 取得件数:', titles.length);
+          const events = parseEvents(html, ORG_SOURCES[org]);
+          saveToStorage(org, events);
+          // 画像URLを先にまとめて保存
+          events.forEach(e => saveImageUrl(e.title, e.imageUrl));
+          console.log('[' + org + '] 取得件数:', events.length);
           document.getElementById('suggestions').innerHTML = '';
-          return titles;
+          return events;
         } catch (e) {
           console.error('[' + org + '] 取得失敗:', e);
           document.getElementById('suggestions').innerHTML = '';
@@ -471,15 +509,18 @@
     // 対応団体選択時はバックグラウンドで先読み
     if (ORG_SOURCES[sel]) fetchOrgEvents(sel);
     hideSuggestions();
+    pendingImageUrl = null;
     document.getElementById('f-name').value = '';
   }
 
   // --- サジェスト ---
+  let pendingImageUrl = null;
+
   function showSuggestions(items) {
     const box = document.getElementById('suggestions');
     if (!items.length) { box.innerHTML = ''; return; }
-    box.innerHTML = items.map((t, i) =>
-      `<div class="suggestion-item" data-idx="${i}" onmousedown="pickSuggestion(this)">${escHtml(t)}</div>`
+    box.innerHTML = items.map((ev, i) =>
+      `<div class="suggestion-item" data-idx="${i}" data-img="${escHtml(ev.imageUrl || '')}" onmousedown="pickSuggestion(this)">${escHtml(ev.title)}</div>`
     ).join('');
   }
 
@@ -489,6 +530,7 @@
 
   function pickSuggestion(el) {
     document.getElementById('f-name').value = el.textContent;
+    pendingImageUrl = el.dataset.img || null;
     hideSuggestions();
   }
 
@@ -497,9 +539,10 @@
     const pool = await fetchOrgEvents(org);
     if (!pool.length) return [];
     const lower = q.toLowerCase();
-    return lower
-      ? pool.filter(t => t.toLowerCase().includes(lower)).slice(0, 5)
-      : pool.slice(0, 5);
+    return (lower
+      ? pool.filter(ev => ev.title.toLowerCase().includes(lower))
+      : pool
+    ).slice(0, 5);
   }
 
   // イベント名入力時のリアルタイムフィルタ
@@ -532,6 +575,7 @@
     if (!eventName || !played_at) { alert('イベント名と開催日は必須です'); return; }
 
     const title = organizer ? `【${organizer}】${eventName}` : eventName;
+    if (pendingImageUrl) saveImageUrl(eventName, pendingImageUrl);
 
     const btn = document.getElementById('save-btn');
     btn.disabled = true;
@@ -557,6 +601,7 @@
 
     ['f-name','f-note','f-organizer-other'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-place').value = '東京';
+    pendingImageUrl = null;
     hideSuggestions();
     document.getElementById('f-organizer').value = 'SCRAP';
     document.getElementById('org-other-group').style.display = 'none';
