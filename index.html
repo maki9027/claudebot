@@ -439,7 +439,18 @@
       if (!pool.length) { hideSuggestions(); return; }
 
       const lower = q.toLowerCase();
-      const matched = pool.filter(t => t.toLowerCase().includes(lower)).slice(0, 10);
+      const matched = pool.filter(t => t.toLowerCase().includes(lower)).slice(0, 5);
+      showSuggestions(matched);
+    });
+
+    input.addEventListener('focus', async () => {
+      const org = document.getElementById('f-organizer').value;
+      if (org !== 'Tumbleweed') return;
+      const pool = await fetchTumbleweedEvents();
+      const q = input.value.trim().toLowerCase();
+      const matched = q
+        ? pool.filter(t => t.toLowerCase().includes(q)).slice(0, 5)
+        : pool.slice(0, 5);
       showSuggestions(matched);
     });
 
