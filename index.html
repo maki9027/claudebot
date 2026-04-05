@@ -31,13 +31,14 @@
       overflow: hidden;
     }
     header::before {
-      content: '✨ 🔍 ✨ 🔑 ✨ 🔍 ✨ 🔑 ✨';
+      content: '';
       position: absolute;
-      bottom: -2px; left: 0; right: 0;
-      font-size: 0.65rem;
-      text-align: center;
-      opacity: 0.35;
-      letter-spacing: 6px;
+      inset: 0;
+      background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg/1280px-Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg');
+      background-size: cover;
+      background-position: center 60%;
+      opacity: 0.18;
+      mix-blend-mode: luminosity;
     }
     header h1 { font-size: 1.4rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     header .logo { font-size: 2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
