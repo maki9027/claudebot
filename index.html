@@ -366,7 +366,7 @@
       <label>💬 感想・メモ</label>
       <textarea id="f-note" placeholder="難しかった謎、印象に残ったことなど..."></textarea>
     </div>
-    <button class="btn" id="save-btn" onclick="saveRecord()">✨ 記録を保存する</button>
+    <button class="btn" id="save-btn" onclick="saveRecord()">記録を保存する</button>
   </div>
 
   <!-- 記録一覧 -->
@@ -695,7 +695,7 @@
     });
 
     btn.disabled = false;
-    btn.textContent = '✨ 記録を保存する';
+    btn.textContent = '記録を保存する';
 
     if (error) {
       alert('保存に失敗しました: ' + error.message);
