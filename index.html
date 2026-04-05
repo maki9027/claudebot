@@ -268,6 +268,7 @@
     .deco-dots span:nth-child(2) { background: #c77dff; }
     .deco-dots span:nth-child(3) { background: #7b9fff; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -335,15 +336,10 @@
       <div class="form-group">
         <label>🏆 結果</label>
         <select id="f-result">
-          <option value="cleared">クリア ✅</option>
-          <option value="failed">未クリア ❌</option>
-          <option value="unknown">不明</option>
+          <option value="true">クリア ✅</option>
+          <option value="false">未クリア ❌</option>
         </select>
       </div>
-    </div>
-    <div class="form-group">
-      <label>⏱ クリアタイム（分）</label>
-      <input type="number" id="f-time" placeholder="例: 55" min="0">
     </div>
     <div class="form-group">
       <label>💬 感想・メモ</label>
@@ -363,12 +359,9 @@
 </div>
 
 <script>
-  function getRecords() {
-    return JSON.parse(localStorage.getItem('nazotoki_records') || '[]');
-  }
-  function saveRecords(list) {
-    localStorage.setItem('nazotoki_records', JSON.stringify(list));
-  }
+  const SUPABASE_URL = 'https://anehiiqaeodnexmjzwsd.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFuZWhpaXFhZW9kbmV4bWp6d3NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzIzMTMsImV4cCI6MjA5MDk0ODMxM30.EWaUuYk56GibRArmF6kdqqH5-wvAerAh0iGEdtk9gbc';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   function switchTab(name) {
     document.querySelectorAll('.tab').forEach((t, i) => {
@@ -379,65 +372,90 @@
     if (name === 'home') renderHome();
   }
 
-  function renderHome() {
-    const records = getRecords();
-    const cleared = records.filter(r => r.result === 'cleared').length;
-    document.getElementById('stat-total').textContent = records.length;
+  async function renderHome() {
+    const list = document.getElementById('recent-list');
+    list.innerHTML = '<div class="loading">読み込み中...</div>';
+
+    const { data: records, error } = await sb
+      .from('records')
+      .select('*')
+      .order('played_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      list.innerHTML = '<div class="no-data">データの取得に失敗しました 🙏</div>';
+      console.error(error);
+      return;
+    }
+
+    const total = records.length;
+    const cleared = records.filter(r => r.cleared).length;
+    document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-cleared').textContent = cleared;
     document.getElementById('stat-rate').textContent =
-      records.length ? Math.round(cleared / records.length * 100) + '%' : '0%';
+      total ? Math.round(cleared / total * 100) + '%' : '0%';
 
-    const list = document.getElementById('recent-list');
     if (!records.length) {
       list.innerHTML = '<div class="no-data">まだ記録がありません🌸<br>「記録する」タブから追加してみましょう！</div>';
       return;
     }
-    const sorted = [...records].reverse().slice(0, 20);
-    list.innerHTML = sorted.map(r => `
+
+    list.innerHTML = records.map(r => `
       <div class="record-card">
         <div class="title">
-          ${escHtml(r.name)}
-          ${r.result === 'cleared' ? '<span class="badge cleared">✅ クリア</span>' : r.result === 'failed' ? '<span class="badge failed">❌ 未クリア</span>' : ''}
+          ${escHtml(r.title)}
+          ${r.cleared ? '<span class="badge cleared">✅ クリア</span>' : '<span class="badge failed">❌ 未クリア</span>'}
         </div>
         <div class="meta">
-          <span>📅 ${r.date}</span>
-          ${r.place ? `<span>📍 ${escHtml(r.place)}</span>` : ''}
-          ${r.time ? `<span>⏱ ${r.time}分</span>` : ''}
+          <span>📅 ${r.played_at || ''}</span>
+          ${r.location ? `<span>📍 ${escHtml(r.location)}</span>` : ''}
+          ${r.difficulty ? `<span>⭐ 難易度 ${r.difficulty}</span>` : ''}
         </div>
-        <div class="difficulty-bar"><div class="fill" style="width:${r.difficulty*20}%"></div></div>
-        ${r.note ? `<div style="margin-top:9px;font-size:0.82rem;color:#a080b0;">${escHtml(r.note)}</div>` : ''}
-        <button class="delete-btn" onclick="deleteRecord('${r.id}')" title="削除">✕</button>
+        <div class="difficulty-bar"><div class="fill" style="width:${(r.difficulty||0)*20}%"></div></div>
+        ${r.impression ? `<div style="margin-top:9px;font-size:0.82rem;color:#a080b0;">${escHtml(r.impression)}</div>` : ''}
+        <button class="delete-btn" onclick="deleteRecord(${r.id})" title="削除">✕</button>
       </div>
     `).join('');
   }
 
-  function saveRecord() {
-    const name = document.getElementById('f-name').value.trim();
-    const date = document.getElementById('f-date').value;
-    if (!name || !date) { alert('イベント名と開催日は必須です'); return; }
-    const record = {
-      id: Date.now().toString(),
-      name,
-      date,
-      place: document.getElementById('f-place').value.trim(),
+  async function saveRecord() {
+    const title = document.getElementById('f-name').value.trim();
+    const played_at = document.getElementById('f-date').value;
+    if (!title || !played_at) { alert('イベント名と開催日は必須です'); return; }
+
+    const btn = document.querySelector('#page-add .btn');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    const { error } = await sb.from('records').insert({
+      title,
+      played_at,
+      location: document.getElementById('f-place').value.trim() || null,
       difficulty: parseInt(document.getElementById('f-difficulty').value),
-      result: document.getElementById('f-result').value,
-      time: document.getElementById('f-time').value || '',
-      note: document.getElementById('f-note').value.trim(),
-    };
-    const records = getRecords();
-    records.push(record);
-    saveRecords(records);
-    ['f-name','f-place','f-time','f-note'].forEach(id => document.getElementById(id).value = '');
+      cleared: document.getElementById('f-result').value === 'true',
+      impression: document.getElementById('f-note').value.trim() || null,
+    });
+
+    btn.disabled = false;
+    btn.textContent = '✨ 記録を保存する';
+
+    if (error) {
+      alert('保存に失敗しました: ' + error.message);
+      console.error(error);
+      return;
+    }
+
+    ['f-name','f-place','f-note'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-difficulty').value = '3';
-    document.getElementById('f-result').value = 'cleared';
+    document.getElementById('f-result').value = 'true';
     alert('記録を保存しました！🎉');
     switchTab('home');
   }
 
-  function deleteRecord(id) {
+  async function deleteRecord(id) {
     if (!confirm('この記録を削除しますか？')) return;
-    saveRecords(getRecords().filter(r => r.id !== id));
+    const { error } = await sb.from('records').delete().eq('id', id);
+    if (error) { alert('削除に失敗しました'); return; }
     renderHome();
   }
 
