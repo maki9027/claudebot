@@ -316,7 +316,7 @@
         </div>
         <div class="difficulty-bar"><div class="fill" style="width:${(r.difficulty||0)*20}%"></div></div>
         ${r.impression ? `<div style="margin-top:9px;font-size:0.82rem;color:#a080b0;">${escHtml(r.impression)}</div>` : ''}
-        <button class="delete-btn" onclick="deleteRecord(${r.id})" title="削除">✕</button>
+        <button class="delete-btn" onclick="deleteRecord('${r.id}')" title="削除">✕</button>
       </div>
     `).join('');
   }
