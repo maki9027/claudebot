@@ -210,6 +210,20 @@
   <div class="section-title">記録を追加</div>
   <div class="form-card">
     <div class="form-group">
+      <label>🏢 団体名</label>
+      <select id="f-organizer" onchange="toggleOrgOther()">
+        <option value="SCRAP">SCRAP</option>
+        <option value="tumbleweed">tumbleweed</option>
+        <option value="Far&amp;Near">Far&amp;Near</option>
+        <option value="XEOXY">XEOXY</option>
+        <option value="その他">その他</option>
+      </select>
+    </div>
+    <div class="form-group" id="org-other-group" style="display:none;">
+      <label>🏢 団体名（その他）</label>
+      <input type="text" id="f-organizer-other" placeholder="団体名を入力">
+    </div>
+    <div class="form-group">
       <label>🎭 イベント名 *</label>
       <input type="text" id="f-name" placeholder="例: 謎解きの館 〜失われた鍵〜">
     </div>
@@ -321,10 +335,20 @@
     `).join('');
   }
 
+  function toggleOrgOther() {
+    const sel = document.getElementById('f-organizer').value;
+    document.getElementById('org-other-group').style.display = sel === 'その他' ? 'block' : 'none';
+  }
+
   async function saveRecord() {
-    const title = document.getElementById('f-name').value.trim();
+    const organizer = document.getElementById('f-organizer').value === 'その他'
+      ? document.getElementById('f-organizer-other').value.trim()
+      : document.getElementById('f-organizer').value;
+    const eventName = document.getElementById('f-name').value.trim();
     const played_at = document.getElementById('f-date').value;
-    if (!title || !played_at) { alert('イベント名と開催日は必須です'); return; }
+    if (!eventName || !played_at) { alert('イベント名と開催日は必須です'); return; }
+
+    const title = organizer ? `【${organizer}】${eventName}` : eventName;
 
     const btn = document.getElementById('save-btn');
     btn.disabled = true;
@@ -348,7 +372,9 @@
       return;
     }
 
-    ['f-name','f-place','f-note'].forEach(id => document.getElementById(id).value = '');
+    ['f-name','f-place','f-note','f-organizer-other'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-organizer').value = 'SCRAP';
+    document.getElementById('org-other-group').style.display = 'none';
     document.getElementById('f-difficulty').value = '3';
     document.getElementById('f-result').value = 'true';
     document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
