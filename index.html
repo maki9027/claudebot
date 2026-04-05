@@ -281,8 +281,8 @@
       <div class="form-group">
         <label>🏆 結果</label>
         <select id="f-result">
-          <option value="true">クリア ✅</option>
-          <option value="false">未クリア ❌</option>
+          <option value="true">成功 ✅</option>
+          <option value="false">失敗 ❌</option>
         </select>
       </div>
     </div>
@@ -351,7 +351,7 @@
       <div class="record-card">
         <div class="title">
           ${escHtml(r.title)}
-          ${r.cleared ? '<span class="badge cleared">✅ クリア</span>' : '<span class="badge failed">❌ 未クリア</span>'}
+          ${r.cleared ? '<span class="badge cleared">✅ 成功</span>' : '<span class="badge failed">❌ 失敗</span>'}
         </div>
         <div class="meta">
           <span>📅 ${r.played_at || ''}</span>
