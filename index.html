@@ -382,7 +382,7 @@
     'Tumbleweed': 'https://tumbleweed.jp/event/ongoing/',
     'Far&Near':   'https://farnear.jp/index.html',
     'XEOXY':      'https://www.xeoxy.com/events',
-    'takarush BLACK LABEL': 'https://nazohiroba.com/mysteries?pfi=13,14&cti=01&mkr=%E3%82%BF%E3%82%AB%E3%83%A9%E3%83%83%E3%82%B7%E3%83%A5',
+    'takarush BLACK LABEL': 'https://huntersvillage.jp/blacklabel/',
   };
   const eventCache = {}; // { org: Promise<string[]> } — Promiseで管理して並行fetch防止
 
@@ -410,7 +410,7 @@
   }
 
   function parseEvents(html, baseUrl) {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = typeof html === 'string' ? new DOMParser().parseFromString(html, 'text/html') : html;
     const seen = new Set();
     const events = [];
     const selectors = [
@@ -485,6 +485,24 @@
     } catch { return null; }
   }
 
+  // org別の専用パーサー（未定義の場合は汎用parseEventsを使用）
+  const ORG_PARSERS = {
+    'takarush BLACK LABEL': (doc, baseUrl) => {
+      const seen = new Set();
+      const events = [];
+      const SKIP = ['大人のための宝探し Black Label', 'Black Label', 'Menu', '人気ランキングTOP5', 'イベントを探す'];
+      doc.querySelectorAll('img[alt]').forEach(img => {
+        const t = img.getAttribute('alt').trim().replace(/\s+/g, ' ');
+        if (t.length >= 4 && t.length <= 100 && !seen.has(t) && !SKIP.includes(t)) {
+          seen.add(t);
+          const imageUrl = resolveUrl(img.getAttribute('src'), baseUrl);
+          events.push({ title: t, imageUrl });
+        }
+      });
+      return events;
+    },
+  };
+
   async function fetchOrgEvents(org) {
     if (!eventCache[org]) {
       const cached = loadFromStorage(org);
@@ -494,7 +512,9 @@
         document.getElementById('suggestions').innerHTML = '<div class="suggestion-loading">イベントを取得中...</div>';
         try {
           const html = await fetchHtml(ORG_SOURCES[org]);
-          const events = parseEvents(html, ORG_SOURCES[org]);
+          const parser = ORG_PARSERS[org] || ((h, b) => parseEvents(h, b));
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const events = parser(doc, ORG_SOURCES[org]);
           saveToStorage(org, events);
           // 画像URLを先にまとめて保存
           events.forEach(e => saveImageUrl(e.title, e.imageUrl));
