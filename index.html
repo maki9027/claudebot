@@ -562,6 +562,7 @@
 
   // --- 団体別イベント取得設定 ---
   const ORG_SOURCES = {
+    'SCRAP':      'https://api.scrapmagazine.com/public/api/2/events',
     'Tumbleweed': 'https://tumbleweed.jp/event/ongoing/',
     'Far&Near':   'https://farnear.jp/index.html',
     'XEOXY':      'https://www.xeoxy.com/events',
@@ -686,6 +687,33 @@
     },
   };
 
+  // org別の専用フェッチャー（HTMLではなくJSONを返すAPIを使うorgに使用）
+  const ORG_FETCHERS = {
+    'SCRAP': async () => {
+      const API = 'https://api.scrapmagazine.com/public/api/2/events';
+      const today = new Date().toISOString().slice(0, 10);
+      let raw;
+      try {
+        const r = await fetch(API);
+        if (!r.ok) throw new Error('non-ok');
+        raw = await r.json();
+      } catch {
+        const enc = encodeURIComponent(API);
+        const r = await fetch('https://api.allorigins.win/get?url=' + enc);
+        const d = await r.json();
+        raw = JSON.parse(d.contents);
+      }
+      const items = Array.isArray(raw) ? raw : (raw.events || raw.data || []);
+      return items
+        .filter(e => e.place_pref && e.place_pref.startsWith('東京') && (!e.ends_on || e.ends_on >= today))
+        .map(e => ({
+          title: (e.event_name || '').replace(/^【[^】]+】/, '').trim(),
+          imageUrl: e.thumbnail_url || e.image_url || null,
+        }))
+        .filter(e => e.title.length >= 2);
+    },
+  };
+
   async function fetchOrgEvents(org) {
     if (!eventCache[org]) {
       const cached = loadFromStorage(org);
@@ -694,10 +722,15 @@
       eventCache[org] = (async () => {
         document.getElementById('suggestions').innerHTML = '<div class="suggestion-loading">イベントを取得中...</div>';
         try {
-          const html = await fetchHtml(ORG_SOURCES[org]);
-          const parser = ORG_PARSERS[org] || ((h, b) => parseEvents(h, b));
-          const doc = new DOMParser().parseFromString(html, 'text/html');
-          const events = parser(doc, ORG_SOURCES[org]);
+          let events;
+          if (ORG_FETCHERS[org]) {
+            events = await ORG_FETCHERS[org]();
+          } else {
+            const html = await fetchHtml(ORG_SOURCES[org]);
+            const parser = ORG_PARSERS[org] || ((h, b) => parseEvents(h, b));
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            events = parser(doc, ORG_SOURCES[org]);
+          }
           saveToStorage(org, events);
           // 画像URLを先にまとめて保存
           events.forEach(e => saveImageUrl(e.title, e.imageUrl));
