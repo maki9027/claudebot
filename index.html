@@ -96,9 +96,13 @@
     }
     .badge.cleared { background: #e0faf0; color: #2dba7a; border: 1.5px solid #a0e8c8; }
     .badge.failed { background: #ffe0ef; color: #e05080; border: 1.5px solid #ffb0c8; }
-    .delete-btn {
+    .card-actions {
       position: absolute;
       top: 12px; right: 12px;
+      display: flex;
+      gap: 6px;
+    }
+    .delete-btn, .edit-btn {
       background: #fff0f8;
       border: 1.5px solid #ffd6ef;
       color: #e090c0;
@@ -109,6 +113,38 @@
       transition: all 0.15s;
     }
     .delete-btn:hover { background: #ffe0ef; color: #e05080; border-color: #ffb0c8; }
+    .edit-btn { color: #c077d0; }
+    .edit-btn:hover { background: #f5e8ff; color: #9040c0; border-color: #d0a0e8; }
+
+    /* 編集モーダル */
+    #edit-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(90,48,112,0.35);
+      z-index: 8888;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    #edit-overlay.open { display: flex; }
+    #edit-modal {
+      background: #fff;
+      border: 2px solid #ffd6ef;
+      border-radius: 24px;
+      padding: 24px 22px;
+      width: 100%;
+      max-width: 520px;
+      margin: auto;
+      box-shadow: 0 8px 32px rgba(199,125,255,0.25);
+    }
+    #edit-modal h3 {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #5a3070;
+      margin-bottom: 18px;
+    }
 
     /* フォーム */
     .form-card {
@@ -289,6 +325,69 @@
 </head>
 <body>
 
+<!-- 編集モーダル -->
+<div id="edit-overlay">
+  <div id="edit-modal">
+    <h3>✏️ 記録を編集</h3>
+    <div class="form-group">
+      <label>🏢 団体名</label>
+      <select id="e-organizer" onchange="toggleEditOrgOther()">
+        <option value="SCRAP">SCRAP</option>
+        <option value="Tumbleweed">Tumbleweed</option>
+        <option value="Far&amp;Near">Far&amp;Near</option>
+        <option value="XEOXY">XEOXY</option>
+        <option value="takarush BLACK LABEL">takarush BLACK LABEL</option>
+        <option value="その他">その他</option>
+      </select>
+    </div>
+    <div class="form-group" id="e-org-other-group" style="display:none;">
+      <label>🏢 団体名（その他）</label>
+      <input type="text" id="e-organizer-other" placeholder="団体名を入力">
+    </div>
+    <div class="form-group">
+      <label>🎭 イベント名 *</label>
+      <input type="text" id="e-name" placeholder="イベント名">
+    </div>
+    <div class="form-row form-row-date">
+      <div class="form-group">
+        <label>📅 開催日 *</label>
+        <input type="date" id="e-date">
+      </div>
+      <div class="form-group">
+        <label>📍 場所</label>
+        <input type="text" id="e-place" placeholder="例: 東京・新宿">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>⭐ 難易度 (1〜5)</label>
+        <select id="e-difficulty">
+          <option value="1">★☆☆☆☆ やさしい</option>
+          <option value="2">★★☆☆☆ 初級</option>
+          <option value="3">★★★☆☆ 中級</option>
+          <option value="4">★★★★☆ 上級</option>
+          <option value="5">★★★★★ 激難</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>🏆 結果</label>
+        <select id="e-result">
+          <option value="true">成功 ✅</option>
+          <option value="false">失敗 ❌</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>💬 感想・メモ</label>
+      <textarea id="e-note" placeholder="感想・メモ"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn" id="edit-save-btn" onclick="saveEdit()" style="flex:1;">保存する</button>
+      <button class="btn" onclick="closeEdit()" style="flex:0 0 auto;width:auto;background:linear-gradient(135deg,#e0c8f0,#c8b0e0);">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <!-- 認証オーバーレイ -->
 <div id="auth-overlay">
   <div class="auth-box">
@@ -392,6 +491,8 @@
 </div>
 
 <script>
+  let recordsCache = {};
+
   const SUPABASE_URL = 'https://anehiiqaeodnexmjzwsd.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFuZWhpaXFhZW9kbmV4bWp6d3NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzIzMTMsImV4cCI6MjA5MDk0ODMxM30.EWaUuYk56GibRArmF6kdqqH5-wvAerAh0iGEdtk9gbc';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -419,6 +520,8 @@
     document.getElementById('stat-rate').textContent =
       total ? Math.round(cleared / total * 100) + '%' : '0%';
 
+    recordsCache = Object.fromEntries(records.map(r => [r.id, r]));
+
     if (!records.length) {
       list.innerHTML = '<div class="no-data">まだ記録がありません🌸<br>上のフォームから追加してみましょう！</div>';
       return;
@@ -444,7 +547,10 @@
           </div>
           ${imgUrl ? `<img src="${escHtml(imgUrl)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;flex-shrink:0;border:2px solid #ffd6ef;">` : ''}
         </div>
-        <button class="delete-btn" onclick="deleteRecord('${r.id}')" title="削除">✕</button>
+        <div class="card-actions">
+          <button class="edit-btn" onclick="openEdit('${r.id}')" title="編集">✏️</button>
+          <button class="delete-btn" onclick="deleteRecord('${r.id}')" title="削除">✕</button>
+        </div>
       </div>
     `}).join('');
   }
@@ -715,6 +821,76 @@
     document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
     renderHome();
   }
+
+  const KNOWN_ORGS = ['SCRAP','Tumbleweed','Far&Near','XEOXY','takarush BLACK LABEL'];
+
+  function parseTitle(title) {
+    const m = title.match(/^【([^】]+)】(.+)$/);
+    if (m) return { organizer: m[1], eventName: m[2] };
+    return { organizer: '', eventName: title };
+  }
+
+  function openEdit(id) {
+    const r = recordsCache[id];
+    if (!r) return;
+    const { organizer, eventName } = parseTitle(r.title);
+    const isKnown = KNOWN_ORGS.includes(organizer);
+    document.getElementById('e-organizer').value = isKnown ? organizer : 'その他';
+    document.getElementById('e-org-other-group').style.display = isKnown ? 'none' : 'block';
+    document.getElementById('e-organizer-other').value = isKnown ? '' : organizer;
+    document.getElementById('e-name').value = eventName;
+    document.getElementById('e-date').value = r.played_at || '';
+    document.getElementById('e-place').value = r.location || '';
+    document.getElementById('e-difficulty').value = r.difficulty || '3';
+    document.getElementById('e-result').value = r.cleared ? 'true' : 'false';
+    document.getElementById('e-note').value = r.impression || '';
+    document.getElementById('edit-save-btn').dataset.id = id;
+    document.getElementById('edit-overlay').classList.add('open');
+  }
+
+  function closeEdit() {
+    document.getElementById('edit-overlay').classList.remove('open');
+  }
+
+  function toggleEditOrgOther() {
+    const val = document.getElementById('e-organizer').value;
+    document.getElementById('e-org-other-group').style.display = val === 'その他' ? 'block' : 'none';
+  }
+
+  async function saveEdit() {
+    const id = document.getElementById('edit-save-btn').dataset.id;
+    const organizer = document.getElementById('e-organizer').value === 'その他'
+      ? document.getElementById('e-organizer-other').value.trim()
+      : document.getElementById('e-organizer').value;
+    const eventName = document.getElementById('e-name').value.trim();
+    const played_at = document.getElementById('e-date').value;
+    if (!eventName || !played_at) { alert('イベント名と開催日は必須です'); return; }
+
+    const btn = document.getElementById('edit-save-btn');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    const { error } = await sb.from('records').update({
+      title: organizer ? `【${organizer}】${eventName}` : eventName,
+      played_at,
+      location: document.getElementById('e-place').value.trim() || null,
+      difficulty: parseInt(document.getElementById('e-difficulty').value),
+      cleared: document.getElementById('e-result').value === 'true',
+      impression: document.getElementById('e-note').value.trim() || null,
+    }).eq('id', id);
+
+    btn.disabled = false;
+    btn.textContent = '保存する';
+
+    if (error) { alert('更新に失敗しました: ' + error.message); return; }
+    closeEdit();
+    renderHome();
+  }
+
+  // モーダル背景クリックで閉じる
+  document.getElementById('edit-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('edit-overlay')) closeEdit();
+  });
 
   async function deleteRecord(id) {
     if (!confirm('この記録を削除しますか？')) return;
