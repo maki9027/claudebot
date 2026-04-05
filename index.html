@@ -182,6 +182,33 @@
       transition: width 0.4s ease;
     }
 
+    /* サジェスト */
+    .input-wrap { position: relative; }
+    .suggestions {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: #fff;
+      border: 2px solid #ff8ec8;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(199,125,255,0.2);
+      z-index: 100;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .suggestions:empty { display: none; }
+    .suggestion-item {
+      padding: 9px 14px;
+      font-size: 0.88rem;
+      color: #5a3070;
+      cursor: pointer;
+      border-bottom: 1px solid #ffeaf6;
+      transition: background 0.1s;
+    }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover, .suggestion-item.active { background: #fff4fa; }
+    .suggestion-loading { padding: 10px 14px; font-size: 0.82rem; color: #c0a0c8; }
+
     /* デコ */
     .deco-dots {
       display: flex;
@@ -225,7 +252,10 @@
     </div>
     <div class="form-group">
       <label>🎭 イベント名 *</label>
-      <input type="text" id="f-name" placeholder="例: 謎解きの館 〜失われた鍵〜">
+      <div class="input-wrap">
+        <input type="text" id="f-name" placeholder="例: 謎解きの館 〜失われた鍵〜" autocomplete="off">
+        <div class="suggestions" id="suggestions"></div>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -335,10 +365,88 @@
     `).join('');
   }
 
+  // --- Tumbleweed イベント取得 ---
+  let tumbleweedEvents = null; // null=未取得, []=取得済み
+
+  async function fetchTumbleweedEvents() {
+    if (tumbleweedEvents !== null) return tumbleweedEvents;
+    const sugBox = document.getElementById('suggestions');
+    sugBox.innerHTML = '<div class="suggestion-loading">イベントを取得中...</div>';
+    try {
+      const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://tumbleweed.jp/event/ongoing/');
+      const res = await fetch(proxy);
+      const data = await res.json();
+      const doc = new DOMParser().parseFromString(data.contents, 'text/html');
+      const seen = new Set();
+      const titles = [];
+      // タイトルになりそな要素を幅広く拾う
+      doc.querySelectorAll('h1,h2,h3,h4,.event-title,.title,.name,[class*="title"],[class*="event"]').forEach(el => {
+        const t = el.textContent.trim().replace(/\s+/g, ' ');
+        if (t.length >= 4 && t.length <= 80 && !seen.has(t)) {
+          seen.add(t);
+          titles.push(t);
+        }
+      });
+      tumbleweedEvents = titles;
+    } catch (e) {
+      console.error('Tumbleweed fetch error:', e);
+      tumbleweedEvents = [];
+    }
+    sugBox.innerHTML = '';
+    return tumbleweedEvents;
+  }
+
   function toggleOrgOther() {
     const sel = document.getElementById('f-organizer').value;
     document.getElementById('org-other-group').style.display = sel === 'その他' ? 'block' : 'none';
+    // Tumbleweed選択時はバックグラウンドで先読み
+    if (sel === 'Tumbleweed') fetchTumbleweedEvents();
+    hideSuggestions();
+    document.getElementById('f-name').value = '';
   }
+
+  // --- サジェスト ---
+  function showSuggestions(items) {
+    const box = document.getElementById('suggestions');
+    if (!items.length) { box.innerHTML = ''; return; }
+    box.innerHTML = items.map((t, i) =>
+      `<div class="suggestion-item" data-idx="${i}" onmousedown="pickSuggestion(this)">${escHtml(t)}</div>`
+    ).join('');
+  }
+
+  function hideSuggestions() {
+    document.getElementById('suggestions').innerHTML = '';
+  }
+
+  function pickSuggestion(el) {
+    document.getElementById('f-name').value = el.textContent;
+    hideSuggestions();
+  }
+
+  // イベント名入力時のリアルタイムフィルタ
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('f-name');
+    input.addEventListener('input', async () => {
+      const q = input.value.trim();
+      const org = document.getElementById('f-organizer').value;
+      if (!q) { hideSuggestions(); return; }
+
+      let pool = [];
+      if (org === 'Tumbleweed') {
+        pool = await fetchTumbleweedEvents();
+      }
+      // Tumbleweed以外 or フォールバック: 何も候補なし
+      if (!pool.length) { hideSuggestions(); return; }
+
+      const lower = q.toLowerCase();
+      const matched = pool.filter(t => t.toLowerCase().includes(lower)).slice(0, 10);
+      showSuggestions(matched);
+    });
+
+    input.addEventListener('blur', () => {
+      setTimeout(hideSuggestions, 150);
+    });
+  });
 
   async function saveRecord() {
     const organizer = document.getElementById('f-organizer').value === 'その他'
@@ -373,6 +481,7 @@
     }
 
     ['f-name','f-place','f-note','f-organizer-other'].forEach(id => document.getElementById(id).value = '');
+    hideSuggestions();
     document.getElementById('f-organizer').value = 'SCRAP';
     document.getElementById('org-other-group').style.display = 'none';
     document.getElementById('f-difficulty').value = '3';
