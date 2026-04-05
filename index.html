@@ -365,21 +365,27 @@
     `).join('');
   }
 
-  // --- Tumbleweed イベント取得 ---
-  let tumbleweedEvents = null; // null=未取得, []=取得済み
+  // --- 団体別イベント取得設定 ---
+  const ORG_SOURCES = {
+    'Tumbleweed': 'https://tumbleweed.jp/event/ongoing/',
+    'Far&Near':   'https://farnear.jp/index.html#event',
+    'XEOXY':      'https://www.xeoxy.com/events',
+  };
+  const eventCache = {}; // { org: null | [] }
 
-  async function fetchTumbleweedEvents() {
-    if (tumbleweedEvents !== null) return tumbleweedEvents;
+  async function fetchOrgEvents(org) {
+    if (eventCache[org] !== undefined && eventCache[org] !== null) return eventCache[org];
+    eventCache[org] = null;
     const sugBox = document.getElementById('suggestions');
     sugBox.innerHTML = '<div class="suggestion-loading">イベントを取得中...</div>';
     try {
-      const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://tumbleweed.jp/event/ongoing/');
+      const url = ORG_SOURCES[org];
+      const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
       const res = await fetch(proxy);
       const data = await res.json();
       const doc = new DOMParser().parseFromString(data.contents, 'text/html');
       const seen = new Set();
       const titles = [];
-      // タイトルになりそな要素を幅広く拾う
       doc.querySelectorAll('h1,h2,h3,h4,.event-title,.title,.name,[class*="title"],[class*="event"]').forEach(el => {
         const t = el.textContent.trim().replace(/\s+/g, ' ');
         if (t.length >= 4 && t.length <= 80 && !seen.has(t)) {
@@ -387,20 +393,20 @@
           titles.push(t);
         }
       });
-      tumbleweedEvents = titles;
+      eventCache[org] = titles;
     } catch (e) {
-      console.error('Tumbleweed fetch error:', e);
-      tumbleweedEvents = [];
+      console.error(org + ' fetch error:', e);
+      eventCache[org] = [];
     }
     sugBox.innerHTML = '';
-    return tumbleweedEvents;
+    return eventCache[org];
   }
 
   function toggleOrgOther() {
     const sel = document.getElementById('f-organizer').value;
     document.getElementById('org-other-group').style.display = sel === 'その他' ? 'block' : 'none';
-    // Tumbleweed選択時はバックグラウンドで先読み
-    if (sel === 'Tumbleweed') fetchTumbleweedEvents();
+    // 対応団体選択時はバックグラウンドで先読み
+    if (ORG_SOURCES[sel]) fetchOrgEvents(sel);
     hideSuggestions();
     document.getElementById('f-name').value = '';
   }
@@ -423,34 +429,29 @@
     hideSuggestions();
   }
 
+  async function getSuggestions(org, q) {
+    if (!ORG_SOURCES[org]) return [];
+    const pool = await fetchOrgEvents(org);
+    if (!pool.length) return [];
+    const lower = q.toLowerCase();
+    return lower
+      ? pool.filter(t => t.toLowerCase().includes(lower)).slice(0, 5)
+      : pool.slice(0, 5);
+  }
+
   // イベント名入力時のリアルタイムフィルタ
   document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('f-name');
-    input.addEventListener('input', async () => {
-      const q = input.value.trim();
-      const org = document.getElementById('f-organizer').value;
-      if (!q) { hideSuggestions(); return; }
-
-      let pool = [];
-      if (org === 'Tumbleweed') {
-        pool = await fetchTumbleweedEvents();
-      }
-      // Tumbleweed以外 or フォールバック: 何も候補なし
-      if (!pool.length) { hideSuggestions(); return; }
-
-      const lower = q.toLowerCase();
-      const matched = pool.filter(t => t.toLowerCase().includes(lower)).slice(0, 5);
-      showSuggestions(matched);
-    });
 
     input.addEventListener('focus', async () => {
       const org = document.getElementById('f-organizer').value;
-      if (org !== 'Tumbleweed') return;
-      const pool = await fetchTumbleweedEvents();
-      const q = input.value.trim().toLowerCase();
-      const matched = q
-        ? pool.filter(t => t.toLowerCase().includes(q)).slice(0, 5)
-        : pool.slice(0, 5);
+      const matched = await getSuggestions(org, input.value.trim());
+      showSuggestions(matched);
+    });
+
+    input.addEventListener('input', async () => {
+      const org = document.getElementById('f-organizer').value;
+      const matched = await getSuggestions(org, input.value.trim());
       showSuggestions(matched);
     });
 
