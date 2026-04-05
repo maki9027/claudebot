@@ -36,34 +36,7 @@
     header h1 { font-size: 1.4rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     header .logo { font-size: 2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
 
-    /* タブ */
-    .tabs {
-      display: flex;
-      background: #fff;
-      border-bottom: 3px solid #ffd6ef;
-      box-shadow: 0 2px 8px rgba(255,142,200,0.1);
-    }
-    .tab {
-      flex: 1;
-      padding: 13px 8px;
-      text-align: center;
-      cursor: pointer;
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: #c0a0c8;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -3px;
-      transition: all 0.2s;
-    }
-    .tab.active {
-      color: #d060c0;
-      border-bottom-color: #ff8ec8;
-      background: #fff8fc;
-    }
-    .tab:hover:not(.active) { background: #fff4fa; color: #d080c0; }
-
-    .page { display: none; padding: 18px; max-width: 680px; margin: 0 auto; }
-    .page.active { display: block; }
+    .main { padding: 18px; max-width: 680px; margin: 0 auto; }
 
     /* 統計カード */
     .stats-grid {
@@ -138,6 +111,7 @@
       padding: 22px;
       box-shadow: 0 4px 16px rgba(199,125,255,0.15);
       border: 2px solid #ffd6ef;
+      margin-bottom: 22px;
     }
     .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 0.8rem; font-weight: 700; color: #c077d0; margin-bottom: 5px; }
@@ -229,14 +203,10 @@
   <h1>謎解き・脱出ゲーム🪿 </h1>
 </header>
 
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('home')">🏠 ホーム</div>
-  <div class="tab" onclick="switchTab('add')">✏️ 記録する</div>
-</div>
-
-<!-- ホーム -->
-<div class="page active" id="page-home">
+<div class="main">
   <div class="deco-dots"><span></span><span></span><span></span><span></span><span></span></div>
+
+  <!-- 統計 -->
   <div class="stats-grid">
     <div class="stat-card">
       <div class="num" id="stat-total">0</div>
@@ -252,12 +222,8 @@
     </div>
   </div>
 
-  <div class="section-title">最近の記録</div>
-  <div id="recent-list"></div>
-</div>
-
-<!-- 記録追加 -->
-<div class="page" id="page-add">
+  <!-- 記録フォーム -->
+  <div class="section-title">記録を追加</div>
   <div class="form-card">
     <div class="form-group">
       <label>🎭 イベント名 *</label>
@@ -296,24 +262,18 @@
       <label>💬 感想・メモ</label>
       <textarea id="f-note" placeholder="難しかった謎、印象に残ったことなど..."></textarea>
     </div>
-    <button class="btn" onclick="saveRecord()">✨ 記録を保存する</button>
+    <button class="btn" id="save-btn" onclick="saveRecord()">✨ 記録を保存する</button>
   </div>
-</div>
 
+  <!-- 記録一覧 -->
+  <div class="section-title">最近の記録</div>
+  <div id="recent-list"></div>
+</div>
 
 <script>
   const SUPABASE_URL = 'https://anehiiqaeodnexmjzwsd.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFuZWhpaXFhZW9kbmV4bWp6d3NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzIzMTMsImV4cCI6MjA5MDk0ODMxM30.EWaUuYk56GibRArmF6kdqqH5-wvAerAh0iGEdtk9gbc';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  function switchTab(name) {
-    document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', ['home','add'][i] === name);
-    });
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + name).classList.add('active');
-    if (name === 'home') renderHome();
-  }
 
   async function renderHome() {
     const list = document.getElementById('recent-list');
@@ -339,7 +299,7 @@
       total ? Math.round(cleared / total * 100) + '%' : '0%';
 
     if (!records.length) {
-      list.innerHTML = '<div class="no-data">まだ記録がありません🌸<br>「記録する」タブから追加してみましょう！</div>';
+      list.innerHTML = '<div class="no-data">まだ記録がありません🌸<br>上のフォームから追加してみましょう！</div>';
       return;
     }
 
@@ -366,7 +326,7 @@
     const played_at = document.getElementById('f-date').value;
     if (!title || !played_at) { alert('イベント名と開催日は必須です'); return; }
 
-    const btn = document.querySelector('#page-add .btn');
+    const btn = document.getElementById('save-btn');
     btn.disabled = true;
     btn.textContent = '保存中...';
 
@@ -391,8 +351,8 @@
     ['f-name','f-place','f-note'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-difficulty').value = '3';
     document.getElementById('f-result').value = 'true';
-    alert('記録を保存しました！🎉');
-    switchTab('home');
+    document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+    renderHome();
   }
 
   async function deleteRecord(id) {
