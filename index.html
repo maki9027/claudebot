@@ -319,6 +319,7 @@
       display: flex;
       background: #fff;
       border-bottom: 2px solid #ffd6ef;
+      position: -webkit-sticky;
       position: sticky;
       top: 0;
       z-index: 500;
@@ -331,6 +332,8 @@
       color: #c0a0d0;
       background: none;
       border: none;
+      -webkit-appearance: none;
+      appearance: none;
       border-bottom: 3px solid transparent;
       cursor: pointer;
       font-family: inherit;
@@ -1020,6 +1023,7 @@
     const idx = name === 'record' ? 0 : 1;
     document.querySelectorAll('.tab-btn')[idx].classList.add('active');
     document.getElementById('panel-' + name).classList.add('active');
+    window.scrollTo(0, 0);
     if (name === 'list') renderList();
   }
 
