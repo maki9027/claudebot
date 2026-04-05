@@ -418,14 +418,35 @@
     return titles;
   }
 
+  const CACHE_TTL = 6 * 60 * 60 * 1000; // 6時間
+
+  function loadFromStorage(org) {
+    try {
+      const raw = localStorage.getItem('ev_' + org);
+      if (!raw) return null;
+      const { titles, ts } = JSON.parse(raw);
+      if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem('ev_' + org); return null; }
+      return titles;
+    } catch { return null; }
+  }
+
+  function saveToStorage(org, titles) {
+    try { localStorage.setItem('ev_' + org, JSON.stringify({ titles, ts: Date.now() })); } catch {}
+  }
+
   async function fetchOrgEvents(org) {
     if (!eventCache[org]) {
+      // まずlocalStorageから即座に返す
+      const cached = loadFromStorage(org);
+      if (cached) { eventCache[org] = Promise.resolve(cached); return eventCache[org]; }
+
       eventCache[org] = (async () => {
         document.getElementById('suggestions').innerHTML = '<div class="suggestion-loading">イベントを取得中...</div>';
         try {
           const html = await fetchHtml(ORG_SOURCES[org]);
           const titles = parseEventTitles(html);
-          console.log('[' + org + '] 取得件数:', titles.length, titles);
+          saveToStorage(org, titles);
+          console.log('[' + org + '] 取得件数:', titles.length);
           document.getElementById('suggestions').innerHTML = '';
           return titles;
         } catch (e) {
@@ -436,6 +457,11 @@
       })();
     }
     return eventCache[org];
+  }
+
+  // ページ読み込み時に全団体を先読み
+  function prefetchAll() {
+    Object.keys(ORG_SOURCES).forEach(org => fetchOrgEvents(org));
   }
 
   function toggleOrgOther() {
@@ -551,6 +577,7 @@
 
   document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
   renderHome();
+  prefetchAll();
 </script>
 </body>
 </html>
