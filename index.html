@@ -143,8 +143,9 @@
     textarea { resize: vertical; min-height: 70px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .form-row .form-group { min-width: 0; }
+    .form-row-date { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    input[type="date"] { -webkit-appearance: none; appearance: none; }
     @media (max-width: 480px) {
-      .form-row-date { grid-template-columns: 1fr; }
       .main { padding: 10px; }
       .form-card { padding: 16px 14px; }
     }
