@@ -368,37 +368,63 @@
   // --- 団体別イベント取得設定 ---
   const ORG_SOURCES = {
     'Tumbleweed': 'https://tumbleweed.jp/event/ongoing/',
-    'Far&Near':   'https://farnear.jp/index.html#event',
+    'Far&Near':   'https://farnear.jp/index.html',
     'XEOXY':      'https://www.xeoxy.com/events',
   };
-  const eventCache = {}; // { org: null | [] }
+  const eventCache = {}; // { org: Promise<string[]> } — Promiseで管理して並行fetch防止
 
-  async function fetchOrgEvents(org) {
-    if (eventCache[org] !== undefined && eventCache[org] !== null) return eventCache[org];
-    eventCache[org] = null;
-    const sugBox = document.getElementById('suggestions');
-    sugBox.innerHTML = '<div class="suggestion-loading">イベントを取得中...</div>';
+  async function fetchHtml(url) {
+    // allorigins → corsproxy.io の順で試みる
     try {
-      const url = ORG_SOURCES[org];
-      const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-      const res = await fetch(proxy);
-      const data = await res.json();
-      const doc = new DOMParser().parseFromString(data.contents, 'text/html');
-      const seen = new Set();
-      const titles = [];
-      doc.querySelectorAll('h1,h2,h3,h4,.event-title,.title,.name,[class*="title"],[class*="event"]').forEach(el => {
+      const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(url));
+      if (res.ok) {
+        const data = await res.json();
+        if (data.contents && data.contents.length > 200) return data.contents;
+      }
+    } catch (e) {}
+    const res2 = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
+    if (!res2.ok) throw new Error('fetch failed');
+    return res2.text();
+  }
+
+  function parseEventTitles(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const seen = new Set();
+    const titles = [];
+    const selectors = [
+      '[class*="event-title"]','[class*="event-name"]','[class*="eventTitle"]','[class*="eventName"]',
+      'article h2','article h3','article h4','.card h2','.card h3','.card h4',
+      'h2','h3','h4','[class*="title"]',
+    ];
+    for (const sel of selectors) {
+      doc.querySelectorAll(sel).forEach(el => {
         const t = el.textContent.trim().replace(/\s+/g, ' ');
-        if (t.length >= 4 && t.length <= 80 && !seen.has(t)) {
+        if (t.length >= 4 && t.length <= 100 && !seen.has(t)) {
           seen.add(t);
           titles.push(t);
         }
       });
-      eventCache[org] = titles;
-    } catch (e) {
-      console.error(org + ' fetch error:', e);
-      eventCache[org] = [];
     }
-    sugBox.innerHTML = '';
+    return titles;
+  }
+
+  async function fetchOrgEvents(org) {
+    if (!eventCache[org]) {
+      eventCache[org] = (async () => {
+        document.getElementById('suggestions').innerHTML = '<div class="suggestion-loading">イベントを取得中...</div>';
+        try {
+          const html = await fetchHtml(ORG_SOURCES[org]);
+          const titles = parseEventTitles(html);
+          console.log('[' + org + '] 取得件数:', titles.length, titles);
+          document.getElementById('suggestions').innerHTML = '';
+          return titles;
+        } catch (e) {
+          console.error('[' + org + '] 取得失敗:', e);
+          document.getElementById('suggestions').innerHTML = '';
+          return [];
+        }
+      })();
+    }
     return eventCache[org];
   }
 
