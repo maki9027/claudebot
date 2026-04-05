@@ -135,6 +135,10 @@
     select option { background: #fff8fc; }
     textarea { resize: vertical; min-height: 70px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-row .form-group { min-width: 0; }
+    @media (max-width: 480px) {
+      .form-row-date { grid-template-columns: 1fr; }
+    }
     .btn {
       background: linear-gradient(135deg, #ff8ec8, #c77dff);
       color: white;
@@ -258,7 +262,7 @@
         <div class="suggestions" id="suggestions"></div>
       </div>
     </div>
-    <div class="form-row">
+    <div class="form-row form-row-date">
       <div class="form-group">
         <label>📅 開催日 *</label>
         <input type="date" id="f-date">
