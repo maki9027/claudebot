@@ -264,7 +264,7 @@
       </div>
       <div class="form-group">
         <label>📍 場所</label>
-        <input type="text" id="f-place" placeholder="例: 東京・新宿">
+        <input type="text" id="f-place" placeholder="例: 東京・新宿" value="東京">
       </div>
     </div>
     <div class="form-row">
@@ -555,7 +555,8 @@
       return;
     }
 
-    ['f-name','f-place','f-note','f-organizer-other'].forEach(id => document.getElementById(id).value = '');
+    ['f-name','f-note','f-organizer-other'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-place').value = '東京';
     hideSuggestions();
     document.getElementById('f-organizer').value = 'SCRAP';
     document.getElementById('org-other-group').style.display = 'none';
