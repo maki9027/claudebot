@@ -314,6 +314,69 @@
       margin-bottom: 8px;
     }
 
+    /* タブ */
+    .tab-bar {
+      display: flex;
+      background: #fff;
+      border-bottom: 2px solid #ffd6ef;
+      position: sticky;
+      top: 0;
+      z-index: 500;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 13px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: #c0a0d0;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-btn.active { color: #c77dff; border-bottom-color: #c77dff; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* 一覧 */
+    .list-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(199,125,255,0.1);
+      border: 2px solid #ffd6ef;
+    }
+    .list-card img {
+      width: 48px; height: 48px;
+      object-fit: cover;
+      border-radius: 8px;
+      flex-shrink: 0;
+      border: 1.5px solid #ffd6ef;
+    }
+    .list-card .list-info { flex: 1; min-width: 0; }
+    .list-card .list-title {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #5a3070;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .list-card .list-meta {
+      font-size: 0.75rem;
+      color: #b090c0;
+      margin-top: 3px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     /* デコ */
     .deco-dots {
       display: flex;
@@ -410,6 +473,12 @@
   <h1>謎解き・脱出ゲーム🪿 </h1>
 </header>
 
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('record')">記録</button>
+  <button class="tab-btn" onclick="switchTab('list')">一覧</button>
+</div>
+
+<div id="panel-record" class="tab-panel active">
 <div class="main">
   <div class="deco-dots"><span></span><span></span><span></span><span></span><span></span></div>
 
@@ -492,6 +561,13 @@
       <div class="num" id="stat-rate">0%</div>
       <div class="label">💪 クリア率</div>
     </div>
+  </div>
+</div>
+</div><!-- /panel-record -->
+
+<div id="panel-list" class="tab-panel">
+  <div class="main">
+    <div id="all-list"></div>
   </div>
 </div>
 
@@ -936,6 +1012,46 @@
     const { error } = await sb.from('records').delete().eq('id', id);
     if (error) { alert('削除に失敗しました'); return; }
     renderHome();
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const idx = name === 'record' ? 0 : 1;
+    document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+    if (name === 'list') renderList();
+  }
+
+  async function renderList() {
+    const el = document.getElementById('all-list');
+    el.innerHTML = '<div class="loading">読み込み中...</div>';
+
+    const { data: records, error } = await sb
+      .from('records')
+      .select('*')
+      .order('played_at', { ascending: false });
+
+    if (error) { el.innerHTML = '<div class="no-data">取得に失敗しました 🙏</div>'; return; }
+    if (!records.length) { el.innerHTML = '<div class="no-data">まだ記録がありません🌸</div>'; return; }
+
+    el.innerHTML = records.map(r => {
+      const imgUrl = getImageUrl(r.title);
+      const dateShort = r.played_at ? r.played_at.slice(5).replace('-', '/') : '';
+      return `
+      <div class="list-card">
+        ${imgUrl ? `<img src="${escHtml(imgUrl)}" alt="">` : ''}
+        <div class="list-info">
+          <div class="list-title">${escHtml(r.title)}</div>
+          <div class="list-meta">
+            <span>📅 ${dateShort}</span>
+            ${r.location ? `<span>📍 ${escHtml(r.location)}</span>` : ''}
+            ${r.difficulty ? `<span>⭐ ${r.difficulty}</span>` : ''}
+            ${r.cleared ? '<span style="color:#2dba7a">✅ 成功</span>' : '<span style="color:#e05080">❌ 失敗</span>'}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   function escHtml(str) {
