@@ -219,6 +219,56 @@
     .suggestion-item:hover, .suggestion-item.active { background: #fff4fa; }
     .suggestion-loading { padding: 10px 14px; font-size: 0.82rem; color: #c0a0c8; }
 
+    /* 認証オーバーレイ */
+    #auth-overlay {
+      position: fixed;
+      inset: 0;
+      background: #fff0f8;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 32px;
+    }
+    #auth-overlay .auth-box {
+      background: #fff;
+      border: 2px solid #ffd6ef;
+      border-radius: 24px;
+      padding: 36px 32px;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(199,125,255,0.2);
+      text-align: center;
+    }
+    #auth-overlay .auth-logo { font-size: 3rem; margin-bottom: 10px; }
+    #auth-overlay h2 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #5a3070;
+      margin-bottom: 6px;
+    }
+    #auth-overlay p {
+      font-size: 0.8rem;
+      color: #b090c0;
+      margin-bottom: 22px;
+    }
+    #auth-overlay input {
+      text-align: center;
+      font-size: 1.1rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 14px;
+    }
+    #auth-overlay .btn { margin-top: 0; }
+    #auth-error {
+      color: #e05080;
+      font-size: 0.82rem;
+      font-weight: 700;
+      min-height: 1.2em;
+      margin-bottom: 8px;
+    }
+
     /* デコ */
     .deco-dots {
       display: flex;
@@ -234,6 +284,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- 認証オーバーレイ -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">🔑</div>
+    <h2>パスワードを入力してください</h2>
+    <p>このアプリはプライベートです</p>
+    <input type="password" id="auth-input" placeholder="パスワード" autocomplete="current-password">
+    <div id="auth-error"></div>
+    <button class="btn" onclick="checkAuth()">ログイン</button>
+  </div>
+</div>
 
 <header>
   <span class="logo">🔍</span>
@@ -659,6 +721,36 @@
 
   function escHtml(str) {
     return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // --- 認証 ---
+  const AUTH_HASH = '79dc3b06bcce5bd682b17bfe0ffc59ed4ad319d9c5e633198674266c9adaaf34';
+  const AUTH_KEY  = 'cb_auth_v1';
+
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function checkAuth() {
+    const val = document.getElementById('auth-input').value;
+    const hash = await sha256(val);
+    if (hash === AUTH_HASH) {
+      localStorage.setItem(AUTH_KEY, '1');
+      document.getElementById('auth-overlay').style.display = 'none';
+    } else {
+      document.getElementById('auth-error').textContent = 'パスワードが違います';
+      document.getElementById('auth-input').value = '';
+      document.getElementById('auth-input').focus();
+    }
+  }
+
+  document.getElementById('auth-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkAuth();
+  });
+
+  if (localStorage.getItem(AUTH_KEY) === '1') {
+    document.getElementById('auth-overlay').style.display = 'none';
   }
 
   document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
