@@ -123,6 +123,7 @@
     label { display: block; font-size: 0.8rem; font-weight: 700; color: #c077d0; margin-bottom: 5px; }
     input, select, textarea {
       width: 100%;
+      min-width: 0;
       background: #fff8fc;
       border: 2px solid #ffd6ef;
       border-radius: 12px;
@@ -144,6 +145,8 @@
     .form-row .form-group { min-width: 0; }
     @media (max-width: 480px) {
       .form-row-date { grid-template-columns: 1fr; }
+      .main { padding: 10px; }
+      .form-card { padding: 16px 14px; }
     }
     .btn {
       background: linear-gradient(135deg, #ff8ec8, #c77dff);
