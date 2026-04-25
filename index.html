@@ -545,7 +545,7 @@
   </div>
 
   <!-- 記録一覧 -->
-  <div class="section-title">最近の記録</div>
+  <div class="section-title">記録一覧</div>
   <div id="recent-list"></div>
 
   <!-- 統計 -->
@@ -586,8 +586,7 @@
     const { data: records, error } = await sb
       .from('records')
       .select('*')
-      .order('played_at', { ascending: false })
-      .limit(20);
+      .order('played_at', { ascending: false });
 
     if (error) {
       list.innerHTML = '<div class="no-data">データの取得に失敗しました 🙏</div>';
