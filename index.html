@@ -646,7 +646,7 @@
     'Far&Near':   'https://farnear.jp/index.html',
     'XEOXY':      'https://www.xeoxy.com/events',
     'takarush BLACK LABEL': 'https://huntersvillage.jp/blacklabel/',
-    'AnotherVision': 'https://anothervision.tokyo/works/',
+    'AnotherVision': 'https://anothervision.tokyo/',
   };
   const eventCache = {}; // { org: Promise<string[]> } — Promiseで管理して並行fetch防止
 
@@ -769,6 +769,13 @@
 
   // org別の専用フェッチャー（HTMLではなくJSONを返すAPIを使うorgに使用）
   const ORG_FETCHERS = {
+    'AnotherVision': async () => [
+      { title: 'Reduction', imageUrl: null },
+      { title: 'アットホームデリバリー', imageUrl: null },
+      { title: 'マッチョ', imageUrl: null },
+      { title: 'キネマ座の怪人', imageUrl: null },
+      { title: 'ゴクアクラボからの生還', imageUrl: null },
+    ],
     'SCRAP': async () => {
       const API = 'https://api.scrapmagazine.com/public/api/2/events';
       const today = new Date().toISOString().slice(0, 10);
