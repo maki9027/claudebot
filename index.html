@@ -646,7 +646,7 @@
     'Far&Near':   'https://farnear.jp/index.html',
     'XEOXY':      'https://www.xeoxy.com/events',
     'takarush BLACK LABEL': 'https://huntersvillage.jp/blacklabel/',
-    'AnotherVision': 'https://anothervision.tokyo/',
+    'AnotherVision': 'https://anothervision.tokyo/contents/01.html',
   };
   const eventCache = {}; // { org: Promise<string[]> } — Promiseで管理して並行fetch防止
 
@@ -751,6 +751,33 @@
 
   // org別の専用パーサー（未定義の場合は汎用parseEventsを使用）
   const ORG_PARSERS = {
+    'AnotherVision': (doc, baseUrl) => {
+      const seen = new Set();
+      const events = [];
+      doc.querySelectorAll('a[href*="details/"]').forEach(link => {
+        let container = link.parentElement;
+        for (let i = 0; i < 5 && container; i++) {
+          const img = container.querySelector('img[src]');
+          if (img) {
+            const imageUrl = resolveUrl(img.getAttribute('src'), baseUrl);
+            // コンテナのテキストから日付・リンク文言を除去してタイトルを抽出
+            const cleaned = container.textContent
+              .replace(/\d{4}\.\d{2}\.\d{2}/g, '')
+              .replace(/[-～〜]\s*(NOW)?/g, '')
+              .replace(/詳しくはこちらから|More/gi, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+            if (cleaned.length >= 2 && cleaned.length <= 60 && !seen.has(cleaned)) {
+              seen.add(cleaned);
+              events.push({ title: cleaned, imageUrl });
+            }
+            break;
+          }
+          container = container.parentElement;
+        }
+      });
+      return events;
+    },
     'takarush BLACK LABEL': (doc, baseUrl) => {
       const seen = new Set();
       const events = [];
@@ -769,13 +796,6 @@
 
   // org別の専用フェッチャー（HTMLではなくJSONを返すAPIを使うorgに使用）
   const ORG_FETCHERS = {
-    'AnotherVision': async () => [
-      { title: 'Reduction', imageUrl: null },
-      { title: 'アットホームデリバリー', imageUrl: null },
-      { title: 'マッチョ', imageUrl: null },
-      { title: 'キネマ座の怪人', imageUrl: null },
-      { title: 'ゴクアクラボからの生還', imageUrl: null },
-    ],
     'SCRAP': async () => {
       const API = 'https://api.scrapmagazine.com/public/api/2/events';
       const today = new Date().toISOString().slice(0, 10);
