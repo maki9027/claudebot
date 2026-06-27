@@ -646,7 +646,7 @@
     'SCRAP':      'https://api.scrapmagazine.com/public/api/2/events?_v=2',
     'Tumbleweed': 'https://tumbleweed.jp/event/ongoing/',
     'Far&Near':   'https://farnear.jp/index.html',
-    'XEOXY':      'https://www.xeoxy.com/',
+    'XEOXY':      'https://en.xeoxy.com/events',
     'takarush BLACK LABEL': 'https://huntersvillage.jp/blacklabel/',
     'AnotherVision': 'https://anothervision.tokyo/contents/01.html',
     'NANICA': 'https://nanica-shimokita.jp/',
@@ -781,20 +781,20 @@
       });
       return events;
     },
-    'XEOXY': (doc, baseUrl) => {
-      const seen = new Set();
-      const events = [];
-      const SKIP = ['XEOXY', 'MENU', 'HOME', 'EVENT', 'GOODS', 'FAQ', 'CONTACT'];
-      doc.querySelectorAll('a[href*="/event/"] img[alt], a[href*="xeoxy.com/event"] img[alt]').forEach(img => {
-        const t = img.getAttribute('alt').trim();
-        const imageUrl = resolveUrl(img.getAttribute('src'), baseUrl);
-        if (t.length >= 1 && t.length <= 60 && !seen.has(t) && !SKIP.includes(t.toUpperCase())) {
-          seen.add(t);
-          events.push({ title: t, imageUrl });
+   'XEOXY': (doc, baseUrl) => {
+    const seen = new Set();
+    const events = [];
+    const SKIP = ['XEOXY.png'];
+    doc.querySelectorAll('img[alt]').forEach(img => {
+      const t = img.getAttribute('alt').replace(/^XEOXYゼオクシー\s*リアル体験型謎解きゲーム[　\s]*/, '').trim();
+      const imageUrl = resolveUrl(img.getAttribute('src'), baseUrl);
+      if (t.length >= 1 && t.length <= 60 && !seen.has(t) && !SKIP.includes(img.getAttribute('alt'))) {
+        seen.add(t);
+        events.push({ title: t, imageUrl });
         }
       });
       return events;
-    },   
+    }, 
     'NANICA': (doc, baseUrl) => {
     const seen = new Set();
     const events = [];
