@@ -781,26 +781,20 @@
       return events;
     },
     'NANICA': (doc, baseUrl) => {
-  const seen = new Set();
-  const events = [];
-  doc.querySelectorAll('a[href*="/event/"]').forEach(link => {
-    const href = link.getAttribute('href') || '';
-    if (href.endsWith('/event/') || href === '/event') return;
-    let container = link;
-    for (let i = 0; i < 4; i++) {
-      if (container.querySelector('img')) break;
-      container = container.parentElement || container;
-    }
-    const img = container.querySelector('img[src]');
-    const imageUrl = img ? resolveUrl(img.getAttribute('src'), baseUrl) : null;
-    const title = (img && img.getAttribute('alt') && img.getAttribute('alt').trim())
-      || link.textContent.trim().replace(/\s+/g, ' ');
-    if (title && title.length >= 2 && title.length <= 60 && !seen.has(title)) {
-      seen.add(title);
-      events.push({ title, imageUrl });
-    }
-    });
-    return events;
+    const seen = new Set();
+    const events = [];
+    doc.querySelectorAll('a[href*="/event/"][title]').forEach(link => {
+      const href = link.getAttribute('href') || '';
+      if (href.endsWith('/event/') || href === '/event') return;
+      const title = link.getAttribute('title').trim();
+      const img = link.querySelector('img[src]');
+      const imageUrl = img ? resolveUrl(img.getAttribute('src'), baseUrl) : null;
+      if (title && title.length >= 2 && title.length <= 60 && !seen.has(title)) {
+        seen.add(title);
+        events.push({ title, imageUrl });
+      }
+      });
+      return events;
     }, 
     'takarush BLACK LABEL': (doc, baseUrl) => {
       const seen = new Set();
