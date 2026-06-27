@@ -646,7 +646,7 @@
     'SCRAP':      'https://api.scrapmagazine.com/public/api/2/events?_v=2',
     'Tumbleweed': 'https://tumbleweed.jp/event/ongoing/',
     'Far&Near':   'https://farnear.jp/index.html',
-    'XEOXY':      'https://en.xeoxy.com/events',
+    'XEOXY':      'https://escape.id/xeoxy-org/',
     'takarush BLACK LABEL': 'https://huntersvillage.jp/blacklabel/',
     'AnotherVision': 'https://anothervision.tokyo/contents/01.html',
     'NANICA': 'https://nanica-shimokita.jp/',
@@ -781,20 +781,24 @@
       });
       return events;
     },
-   'XEOXY': (doc, baseUrl) => {
-    const seen = new Set();
-    const events = [];
-    const SKIP = ['XEOXY.png'];
-    doc.querySelectorAll('img[alt]').forEach(img => {
-      const t = img.getAttribute('alt').replace(/^XEOXYゼオクシー\s*リアル体験型謎解きゲーム[　\s]*/, '').trim();
-      const imageUrl = resolveUrl(img.getAttribute('src'), baseUrl);
-      if (t.length >= 1 && t.length <= 60 && !seen.has(t) && !SKIP.includes(img.getAttribute('alt'))) {
-        seen.add(t);
-        events.push({ title: t, imageUrl });
+    'XEOXY': (doc, baseUrl) => {
+      const seen = new Set();
+      const events = [];
+      // 「開催中・開催予定」セクションのリンクだけ取得（終了公演を除外）
+      const section = doc.querySelector('#events, [id*="event"], h2');
+      doc.querySelectorAll('a[href*="/xeoxy-org/e-"]').forEach(link => {
+        // 「開催終了」を含む要素は除外
+        if (link.textContent.includes('開催終了')) return;
+        const t = link.textContent
+          .replace(/発売中|残りわずか|完売|XEOXY|約\d+分|\d+〜\d+人|東京|大阪|名古屋|ホール型|ルーム型|\*/g, '')
+          .replace(/\s+/g, ' ').trim();
+        if (t.length >= 1 && t.length <= 60 && !seen.has(t)) {
+          seen.add(t);
+          events.push({ title: t, imageUrl: null });
         }
       });
       return events;
-    }, 
+    },
     'NANICA': (doc, baseUrl) => {
     const seen = new Set();
     const events = [];
