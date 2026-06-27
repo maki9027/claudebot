@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>私の謎解き管理</title>
+  <title>謎解き記録</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="mobile-web-app-capable" content="yes">
@@ -496,6 +496,7 @@
         <option value="XEOXY">XEOXY</option>
         <option value="takarush BLACK LABEL">takarush BLACK LABEL</option>
         <option value="AnotherVision">AnotherVision</option>
+        <option value="NANICA">NANICA</option>
         <option value="その他">その他</option>
       </select>
     </div>
@@ -647,6 +648,7 @@
     'XEOXY':      'https://www.xeoxy.com/events',
     'takarush BLACK LABEL': 'https://huntersvillage.jp/blacklabel/',
     'AnotherVision': 'https://anothervision.tokyo/contents/01.html',
+    'NANICA': 'https://nanica-shimokita.jp/',
   };
   const eventCache = {}; // { org: Promise<string[]> } — Promiseで管理して並行fetch防止
 
@@ -778,6 +780,28 @@
       });
       return events;
     },
+    'NANICA': (doc, baseUrl) => {
+  const seen = new Set();
+  const events = [];
+  doc.querySelectorAll('a[href*="/event/"]').forEach(link => {
+    const href = link.getAttribute('href') || '';
+    if (href.endsWith('/event/') || href === '/event') return;
+    let container = link;
+    for (let i = 0; i < 4; i++) {
+      if (container.querySelector('img')) break;
+      container = container.parentElement || container;
+    }
+    const img = container.querySelector('img[src]');
+    const imageUrl = img ? resolveUrl(img.getAttribute('src'), baseUrl) : null;
+    const title = (img && img.getAttribute('alt') && img.getAttribute('alt').trim())
+      || link.textContent.trim().replace(/\s+/g, ' ');
+    if (title && title.length >= 2 && title.length <= 60 && !seen.has(title)) {
+      seen.add(title);
+      events.push({ title, imageUrl });
+    }
+    });
+    return events;
+    }, 
     'takarush BLACK LABEL': (doc, baseUrl) => {
       const seen = new Set();
       const events = [];
@@ -977,7 +1001,7 @@
     renderHome();
   }
 
-  const KNOWN_ORGS = ['SCRAP','Tumbleweed','Far&Near','XEOXY','takarush BLACK LABEL','AnotherVision'];
+  const KNOWN_ORGS = ['SCRAP','Tumbleweed','Far&Near','XEOXY','takarush BLACK LABEL','AnotherVision','NANICA'];
 
   function parseTitle(title) {
     const m = title.match(/^【([^】]+)】(.+)$/);
