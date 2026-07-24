@@ -615,7 +615,7 @@
     }
 
     list.innerHTML = records.map(r => {
-      const imgUrl = getImageUrl(r.title);
+      const imgUrl = await getImageUrl(r.title);
       return `
       <div class="record-card">
         <div style="display:flex;gap:12px;align-items:flex-start;">
@@ -738,23 +738,36 @@
   }
 
   // タイトル→画像URL のマッピングをlocalStorageで管理
-  function saveImageUrl(eventName, imageUrl) {
-    if (!imageUrl) return;
-    try {
-      const map = JSON.parse(localStorage.getItem('ev_images') || '{}');
-      map[eventName] = imageUrl;
+  async function saveImageUrl(eventName, imageUrl) {
+  if (!imageUrl) return;
+  // localStorageにも保存（即時表示用）
+  try {
+    const map = JSON.parse(localStorage.getItem('ev_images') || '{}');
+    map[eventName] = imageUrl;
+    localStorage.setItem('ev_images', JSON.stringify(map));
+  } catch {}
+  // Supabaseにも保存（全デバイス共有用）
+  try {
+    await sb.from('event_images').upsert({ event_name: eventName, image_url: imageUrl }, { onConflict: 'event_name' });
+  } catch {}
+}
+
+async function getImageUrl(recordTitle) {
+  try {
+    const eventName = recordTitle.replace(/^【[^】]+】/, '');
+    // まずlocalStorageを確認
+    const map = JSON.parse(localStorage.getItem('ev_images') || '{}');
+    if (map[eventName]) return map[eventName];
+    // なければSupabaseから取得
+    const { data } = await sb.from('event_images').select('image_url').eq('event_name', eventName).single();
+    if (data?.image_url) {
+      map[eventName] = data.image_url;
       localStorage.setItem('ev_images', JSON.stringify(map));
-    } catch {}
-  }
-
-  function getImageUrl(recordTitle) {
-    try {
-      const map = JSON.parse(localStorage.getItem('ev_images') || '{}');
-      const eventName = recordTitle.replace(/^【[^】]+】/, '');
-      return map[eventName] || null;
-    } catch { return null; }
-  }
-
+      return data.image_url;
+    }
+  } catch {}
+  return null;
+}
   // org別の専用パーサー（未定義の場合は汎用parseEventsを使用）
   const ORG_PARSERS = {
     'AnotherVision': (doc, baseUrl) => {
@@ -1147,7 +1160,7 @@
     if (!records.length) { el.innerHTML = '<div class="no-data">まだ記録がありません🌸</div>'; return; }
 
     el.innerHTML = records.map(r => {
-      const imgUrl = getImageUrl(r.title);
+      const imgUrl = await getImageUrl(r.title);
       const dateShort = r.played_at ? r.played_at.slice(5).replace('-', '/') : '';
       return `
       <div class="list-card">
