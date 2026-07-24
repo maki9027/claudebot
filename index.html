@@ -1179,7 +1179,7 @@
     const hash = await sha256(val);
     if (hash === AUTH_HASH) {
       localStorage.setItem(AUTH_KEY, '1');
-      document.getElementById('auth-overlay').style.display = 'none';
+      document.getElementById('auth-overlay').style.setProperty('display', 'none', 'important');
     } else {
       document.getElementById('auth-error').textContent = 'パスワードが違います';
       document.getElementById('auth-input').value = '';
@@ -1193,7 +1193,7 @@
   });
 
   if (localStorage.getItem(AUTH_KEY) === '1') {
-    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('auth-overlay').style.setProperty('display', 'none', 'important');
   }
 
   document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
