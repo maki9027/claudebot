@@ -470,7 +470,7 @@
     <p>このアプリはプライベートです</p>
     <input type="password" id="auth-input" placeholder="パスワード" autocomplete="current-password">
     <div id="auth-error"></div>
-    <button class="btn" onclick="checkAuth()">ログイン</button>
+    <button class="btn" onclick="document.getElementById('auth-input').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))">ログイン</button>
   </div>
 </div>
 
