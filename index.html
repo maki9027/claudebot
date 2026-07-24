@@ -1160,7 +1160,7 @@
     if (error) { el.innerHTML = '<div class="no-data">取得に失敗しました 🙏</div>'; return; }
     if (!records.length) { el.innerHTML = '<div class="no-data">まだ記録がありません🌸</div>'; return; }
 
-    el.innerHTML = records.map(r => {
+    const cards2 = await Promise.all(records.map(async r => {
       const imgUrl = await getImageUrl(r.title);
       const dateShort = r.played_at ? r.played_at.slice(5).replace('-', '/') : '';
       return `
@@ -1176,7 +1176,8 @@
           </div>
         </div>
       </div>`;
-    }).join('');
+    }));
+    el.innerHTML = cards2.join('');
   }
 
   function escHtml(str) {
