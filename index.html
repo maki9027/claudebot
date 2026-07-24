@@ -410,6 +410,7 @@
         <option value="takarush BLACK LABEL">takarush BLACK LABEL</option>
         <option value="AnotherVision">AnotherVision</option>
         <option value="NANICA">NANICA</option>
+        <option value="RIDDLER">RIDDLER</option>
         <option value="その他">その他</option>
       </select>
     </div>
@@ -498,6 +499,7 @@
         <option value="takarush BLACK LABEL">takarush BLACK LABEL</option>
         <option value="AnotherVision">AnotherVision</option>
         <option value="NANICA">NANICA</option>
+        <option value="RIDDLER">RIDDLER</option>
         <option value="その他">その他</option>
       </select>
     </div>
@@ -650,6 +652,7 @@
     'takarush BLACK LABEL': 'https://huntersvillage.jp/blacklabel/',
     'AnotherVision': 'https://anothervision.tokyo/contents/01.html',
     'NANICA': 'https://nanica-shimokita.jp/',
+    'RIDDLER':      'https://escape.id/riddler-org/',
   };
   const eventCache = {}; // { org: Promise<string[]> } — Promiseで管理して並行fetch防止
 
@@ -829,6 +832,21 @@
       });
       return events;
     },
+    'RIDDLER': (doc, baseUrl) => {
+  const seen = new Set();
+  const events = [];
+  doc.querySelectorAll('a[href*="/riddler-org/e-"]').forEach(link => {
+    if (link.textContent.includes('開催終了')) return;
+    const t = link.textContent
+      .replace(/発売中|残りわずか|完売|RIDDLER|約\d+分|\d+〜\d+人|東京|大阪|名古屋|ホール型|ルーム型|\*/g, '')
+      .replace(/\s+/g, ' ').trim();
+    if (t.length >= 1 && t.length <= 60 && !seen.has(t)) {
+      seen.add(t);
+      events.push({ title: t, imageUrl: null });
+    }
+  });
+  return events;
+},
   };
 
   // org別の専用フェッチャー（HTMLではなくJSONを返すAPIを使うorgに使用）
@@ -1014,7 +1032,7 @@
     renderHome();
   }
 
-  const KNOWN_ORGS = ['SCRAP','Tumbleweed','Far&Near','XEOXY','takarush BLACK LABEL','AnotherVision','NANICA'];
+  const KNOWN_ORGS = ['SCRAP','Tumbleweed','Far&Near','XEOXY','takarush BLACK LABEL','AnotherVision','NANICA','RIDDLER'];
 
   function parseTitle(title) {
     const m = title.match(/^【([^】]+)】(.+)$/);
