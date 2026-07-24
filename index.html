@@ -614,7 +614,7 @@
       return;
     }
 
-    list.innerHTML = records.map(r => {
+    const cards = await Promise.all(records.map(async r => {
       const imgUrl = await getImageUrl(r.title);
       return `
       <div class="record-card">
@@ -640,7 +640,8 @@
           <button class="delete-btn" onclick="deleteRecord('${r.id}')" title="削除">✕</button>
         </div>
       </div>
-    `}).join('');
+    `}));
+      list.innerHTML = cards.join('');
   }
 
   // --- 団体別イベント取得設定 ---
