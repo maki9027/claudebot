@@ -797,7 +797,9 @@
           seen.add(t);
           let imageUrl = null;
           try {
-            const html = await fetchHtml(link.getAttribute('href'));
+            const href = link.getAttribute('href');
+            const url = href.startsWith('http') ? href : 'https://escape.id' + href;
+            const html = await fetchHtml(url);
             const d = new DOMParser().parseFromString(html, 'text/html');
             const og = d.querySelector('meta[property="og:image"]');
             if (og) imageUrl = og.getAttribute('content');
@@ -849,7 +851,9 @@
         seen.add(t);
         let imageUrl = null;
         try {
-          const html = await fetchHtml(link.getAttribute('href'));
+          const href = link.getAttribute('href');
+          const url = href.startsWith('http') ? href : 'https://escape.id' + href;
+          const html = await fetchHtml(url);
           const d = new DOMParser().parseFromString(html, 'text/html');
           const og = d.querySelector('meta[property="og:image"]');
           if (og) imageUrl = og.getAttribute('content');
