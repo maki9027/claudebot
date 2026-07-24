@@ -784,7 +784,7 @@
       });
       return events;
     },
-    'XEOXY': (doc, baseUrl) => {
+    'XEOXY': async (doc, baseUrl) => {
         const seen = new Set();
         const events = [];
         const links = [...doc.querySelectorAll('a[href*="/xeoxy-org/e-"]')]
@@ -836,28 +836,28 @@
       });
       return events;
     },
-    'RIDDLER': (doc, baseUrl) => {
-  const seen = new Set();
-  const events = [];
-  const links = [...doc.querySelectorAll('a[href*="/riddler-org/e-"]')]
-    .filter(link => !link.textContent.includes('開催終了'));
-  for (const link of links) {
-    const t = link.textContent
-      .replace(/発売中|残りわずか|完売|RIDDLER|約\d+分|\d+〜\d+人|東京|大阪|名古屋|ホール型|ルーム型|\*/g, '')
-      .replace(/\s+/g, ' ').trim();
-    if (!t || t.length < 1 || t.length > 60 || seen.has(t)) continue;
-    seen.add(t);
-    let imageUrl = null;
-    try {
-      const html = await fetchHtml(link.href);
-      const d = new DOMParser().parseFromString(html, 'text/html');
-      const og = d.querySelector('meta[property="og:image"]');
-      if (og) imageUrl = og.getAttribute('content');
-    } catch {}
-    events.push({ title: t, imageUrl });
-  }
-  return events;
-},
+    'RIDDLER': async (doc, baseUrl) => {
+      const seen = new Set();
+      const events = [];
+      const links = [...doc.querySelectorAll('a[href*="/riddler-org/e-"]')]
+        .filter(link => !link.textContent.includes('開催終了'));
+      for (const link of links) {
+        const t = link.textContent
+          .replace(/発売中|残りわずか|完売|RIDDLER|約\d+分|\d+〜\d+人|東京|大阪|名古屋|ホール型|ルーム型|\*/g, '')
+          .replace(/\s+/g, ' ').trim();
+        if (!t || t.length < 1 || t.length > 60 || seen.has(t)) continue;
+        seen.add(t);
+        let imageUrl = null;
+        try {
+          const html = await fetchHtml(link.href);
+          const d = new DOMParser().parseFromString(html, 'text/html');
+          const og = d.querySelector('meta[property="og:image"]');
+          if (og) imageUrl = og.getAttribute('content');
+        } catch {}
+        events.push({ title: t, imageUrl });
+      }
+      return events;
+    },
   };
 
   // org別の専用フェッチャー（HTMLではなくJSONを返すAPIを使うorgに使用）
