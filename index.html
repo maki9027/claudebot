@@ -752,22 +752,22 @@
   } catch {}
 }
 
-async function getImageUrl(recordTitle) {
-  try {
-    const eventName = recordTitle.replace(/^【[^】]+】/, '');
-    // まずlocalStorageを確認
-    const map = JSON.parse(localStorage.getItem('ev_images') || '{}');
-    if (map[eventName]) return map[eventName];
-    // なければSupabaseから取得
-    const { data } = await sb.from('event_images').select('image_url').eq('event_name', eventName).single();
-    if (data?.image_url) {
-      map[eventName] = data.image_url;
-      localStorage.setItem('ev_images', JSON.stringify(map));
-      return data.image_url;
+    async function getImageUrl(recordTitle) {
+      try {
+        const eventName = recordTitle.replace(/^【[^】]+】/, '');
+        // まずlocalStorageを確認
+        const map = JSON.parse(localStorage.getItem('ev_images') || '{}');
+        if (map[eventName]) return map[eventName];
+        // なければSupabaseから取得
+        const { data } = await sb.from('event_images').select('image_url').eq('event_name', eventName).single();
+        if (data?.image_url) {
+          map[eventName] = data.image_url;
+          localStorage.setItem('ev_images', JSON.stringify(map));
+          return data.image_url;
+        }
+      } catch {}
+      return null;
     }
-  } catch {}
-  return null;
-}
   // org別の専用パーサー（未定義の場合は汎用parseEventsを使用）
   const ORG_PARSERS = {
     'AnotherVision': (doc, baseUrl) => {
