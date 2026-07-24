@@ -912,7 +912,7 @@
             const html = await fetchHtml(ORG_SOURCES[org]);
             const parser = ORG_PARSERS[org] || ((h, b) => parseEvents(h, b));
             const doc = new DOMParser().parseFromString(html, 'text/html');
-            events = parser(doc, ORG_SOURCES[org]);
+            events = await parser(doc, ORG_SOURCES[org]);
           }
           saveToStorage(org, events);
           // 画像URLを先にまとめて保存
