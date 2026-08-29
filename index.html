@@ -762,7 +762,7 @@
         const map = JSON.parse(localStorage.getItem('ev_images') || '{}');
         if (map[eventName]) return map[eventName];
         // なければSupabaseから取得
-        const { data } = await sb.from('event_images').select('image_url').eq('event_name', eventName).single();
+        const { data } = await sb.from('event_images').select('image_url').eq('event_name', eventName).maybeSingle();
         if (data?.image_url) {
           map[eventName] = data.image_url;
           localStorage.setItem('ev_images', JSON.stringify(map));
