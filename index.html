@@ -625,8 +625,7 @@
               ${r.cleared ? '<span class="badge cleared">✅ 成功</span>' : '<span class="badge failed">❌ 失敗</span>'}
             </div>
             <div class="meta">
-              <span class="date-full">📅 ${r.played_at || ''}</span>
-              <span class="date-short">📅 ${r.played_at ? r.played_at.slice(5).replace('-','/') : ''}</span>
+              <span>📅 ${r.played_at ? r.played_at.slice(5).replace('-','/') : ''}</span>
               ${r.location ? `<span>📍 ${escHtml(r.location)}</span>` : ''}
               ${r.difficulty ? `<span>⭐ 難易度 ${r.difficulty}</span>` : ''}
             </div>
