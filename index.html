@@ -659,8 +659,10 @@
 
   async function fetchHtml(url) {
     const enc = encodeURIComponent(url);
-    // 3つのプロキシを並列で試して最初に成功したものを使う
     return Promise.any([
+      fetch('https://cors-proxy.mai1asting1uge.workers.dev/?url=' + enc)
+        .then(r => { if (!r.ok) throw new Error('non-ok'); return r.text(); })
+        .then(t => { if (t.length < 200) throw new Error('empty'); return t; }),
       fetch('https://api.allorigins.win/get?url=' + enc)
         .then(r => r.json())
         .then(d => { if (!d.contents || d.contents.length < 200) throw new Error('empty'); return d.contents; }),
