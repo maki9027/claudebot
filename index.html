@@ -657,9 +657,6 @@ if (error) {
   return;
 }
 
-
-list.innerHTML = `<div>取得件数：${records.length}</div>`;
-console.log('取得したデータ:', records);
     const total = records.length;
     const cleared = records.filter(r => r.cleared).length;
     document.getElementById('stat-total').textContent = total;
