@@ -586,10 +586,10 @@
   let recordsCache = {};
   
   // — パスワード認証 —
-const EXPECTED_PASSWORD_HASH = ‘6f574fa7f7bb80b177e0316dbdf70a4238effe6d277c856683667807ea0b7211’;
+const EXPECTED_PASSWORD_HASH = '6f574fa7f7bb80b177e0316dbdf70a4238effe6d277c856683667807ea0b7211';
 async function authenticate() {
-const input = document.getElementById(‘auth-input’);
-const error = document.getElementById(‘auth-error’);
+const input = document.getElementById('auth-input');
+const error = document.getElementById('auth-error');
 try {
   const data = new TextEncoder().encode(input.value);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -609,8 +609,8 @@ try {
   error.textContent = '認証処理に失敗しました';
 }
 }
-document.getElementById(‘auth-input’).addEventListener(‘keydown’, e => {
-if (e.key === ‘Enter’) authenticate();
+document.getElementById('auth-input').addEventListener('keydown', e => {
+if (e.key === 'Enter') authenticate();
 });
 
 
