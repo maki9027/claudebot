@@ -645,17 +645,11 @@ checkAuth();
       .select('*')
       .order('played_at', { ascending: false });
 
-//    if (error) {
-//      list.innerHTML = '<div class="no-data">データの取得に失敗しました 🙏</div>';
-//      console.error(error);
-//      return;
-//    }
-
-if (error) {
-  list.innerHTML = `<div class="no-data">データ取得エラー：${error.message}</div>`;
-  console.error('Supabase取得エラー:', error);
-  return;
-}
+    if (error) {
+      list.innerHTML = '<div class="no-data">データの取得に失敗しました 🙏</div>';
+      console.error(error);
+      return;
+    }
 
     const total = records.length;
     const cleared = records.filter(r => r.cleared).length;
