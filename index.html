@@ -655,6 +655,7 @@
     'AnotherVision': 'https://anothervision.tokyo/contents/01.html',
     'NANICA': 'https://nanica-shimokita.jp/',
     'RIDDLER':      'https://escape.id/riddler-org/',
+    'よだかのレコード': 'https://www.yodaka.info/',
   };
   const eventCache = {}; // { org: Promise<string[]> } — Promiseで管理して並行fetch防止
 
@@ -878,6 +879,24 @@
         events.push({ title: t, imageUrl });
       }
       return events;
+    },
+    'よだかのレコード': (doc, baseUrl) => {
+      const seen = new Set();
+      const events = [];
+      const BLOCKLIST = ['よだかのレコード','トップ','アクセス','会社概要','イベント一覧','チケット','店舗','お問い合わせ','FAQ','利用規約','プライバシーポリシー','メニュー'];
+      const candidateEls = [...doc.querySelectorAll('a[href], h2, h3, h4, li, .event, .title')];
+      candidateEls.forEach(el => {
+        const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!text || text.length < 2 || text.length > 80 || seen.has(text)) return;
+        if (BLOCKLIST.some(v => text.includes(v))) return;
+        if (!/[イベント|謎解き|脱出|ゲーム|ホール|ルーム|店舗|予約|募集|開催|東京|大阪|名古屋|会場|チケット]/.test(text)) return;
+        const link = el.closest('a');
+        const img = link ? link.querySelector('img[src]') : null;
+        const imageUrl = img ? resolveUrl(img.getAttribute('src'), baseUrl) : null;
+        seen.add(text);
+        events.push({ title: text, imageUrl });
+      });
+      return events.slice(0, 20);
     },
   };
 
