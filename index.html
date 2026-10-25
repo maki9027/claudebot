@@ -411,6 +411,7 @@
         <option value="AnotherVision">AnotherVision</option>
         <option value="NANICA">NANICA</option>
         <option value="RIDDLER">RIDDLER</option>
+        <option value="よだか">よだか</option>
         <option value="その他">その他</option>
       </select>
     </div>
@@ -500,6 +501,7 @@
         <option value="AnotherVision">AnotherVision</option>
         <option value="NANICA">NANICA</option>
         <option value="RIDDLER">RIDDLER</option>
+        <option value="よだか">よだか</option>
         <option value="その他">その他</option>
       </select>
     </div>
@@ -582,7 +584,7 @@
   let recordsCache = {};
 
   const SUPABASE_URL = 'https://anehiiqaeodnexmjzwsd.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFuZWhpaXFhZW9kbmV4bWp6d3NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzIzMTMsImV4cCI6MjA5MDk0ODMxM30.EWaUuYk56GibRArmF6kdqqH5-wvAerAh0iGEdtk9gbc';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFuZWhpaXFhZW9kbmV4bWp6d3NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzIzMTMsImV4cCI6MjA5MDk0ODMxM30.EWaUuY[...])';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   async function renderHome() {
@@ -998,227 +1000,28 @@
 
   // イベント名入力時のリアルタイムフィルタ
   document.addEventListener('DOMContentLoaded', () => {
-    const input = document.getElementById('f-name');
-
-    input.addEventListener('focus', async () => {
+    const nameInput = document.getElementById('f-name');
+    nameInput.addEventListener('input', async () => {
       const org = document.getElementById('f-organizer').value;
-      const matched = await getSuggestions(org, input.value.trim());
-      showSuggestions(matched);
+      const q = nameInput.value.trim();
+      if (!q) { hideSuggestions(); return; }
+      if (org === 'その他') { hideSuggestions(); return; }
+      const items = await getSuggestions(org, q);
+      showSuggestions(items);
     });
 
-    input.addEventListener('input', async () => {
-      const org = document.getElementById('f-organizer').value;
-      const matched = await getSuggestions(org, input.value.trim());
-      showSuggestions(matched);
-    });
-
-    input.addEventListener('blur', () => {
-      setTimeout(hideSuggestions, 150);
-    });
+    nameInput.addEventListener('blur', () => setTimeout(hideSuggestions, 120));
   });
 
-  async function saveRecord() {
-    const organizer = document.getElementById('f-organizer').value === 'その他'
-      ? document.getElementById('f-organizer-other').value.trim()
-      : document.getElementById('f-organizer').value;
-    const eventName = document.getElementById('f-name').value.trim();
-    const played_at = document.getElementById('f-date').value;
-    if (!eventName || !played_at) { alert('イベント名と開催日は必須です'); return; }
-
-    const title = organizer ? `【${organizer}】${eventName}` : eventName;
-    if (pendingImageUrl) saveImageUrl(eventName, pendingImageUrl);
-
-    const btn = document.getElementById('save-btn');
-    btn.disabled = true;
-    btn.textContent = '保存中...';
-
-    const { error } = await sb.from('records').insert({
-      title,
-      played_at,
-      location: document.getElementById('f-place').value.trim() || null,
-      difficulty: parseInt(document.getElementById('f-difficulty').value),
-      cleared: document.getElementById('f-result').value === 'true',
-      impression: document.getElementById('f-note').value.trim() || null,
-    });
-
-    btn.disabled = false;
-    btn.textContent = '記録を保存する';
-
-    if (error) {
-      alert('保存に失敗しました: ' + error.message);
-      console.error(error);
-      return;
-    }
-
-    ['f-name','f-note','f-organizer-other'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('f-place').value = '東京';
-    pendingImageUrl = null;
-    hideSuggestions();
-    document.getElementById('f-organizer').value = 'SCRAP';
-    document.getElementById('org-other-group').style.display = 'none';
-    document.getElementById('f-difficulty').value = '3';
-    document.getElementById('f-result').value = 'true';
-    document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
-    renderHome();
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.textContent === (tabName === 'record' ? '記録' : '一覧')));
+    document.getElementById('panel-record').classList.toggle('active', tabName === 'record');
+    document.getElementById('panel-list').classList.toggle('active', tabName === 'list');
   }
 
-  const KNOWN_ORGS = ['SCRAP','Tumbleweed','Far&Near','XEOXY','takarush BLACK LABEL','AnotherVision','NANICA','RIDDLER'];
-
-  function parseTitle(title) {
-    const m = title.match(/^【([^】]+)】(.+)$/);
-    if (m) return { organizer: m[1], eventName: m[2] };
-    return { organizer: '', eventName: title };
-  }
-
-  function openEdit(id) {
-    const r = recordsCache[id];
-    if (!r) return;
-    const { organizer, eventName } = parseTitle(r.title);
-    const isKnown = KNOWN_ORGS.includes(organizer);
-    document.getElementById('e-organizer').value = isKnown ? organizer : 'その他';
-    document.getElementById('e-org-other-group').style.display = isKnown ? 'none' : 'block';
-    document.getElementById('e-organizer-other').value = isKnown ? '' : organizer;
-    document.getElementById('e-name').value = eventName;
-    document.getElementById('e-date').value = r.played_at || '';
-    document.getElementById('e-place').value = r.location || '';
-    document.getElementById('e-difficulty').value = r.difficulty || '3';
-    document.getElementById('e-result').value = r.cleared ? 'true' : 'false';
-    document.getElementById('e-note').value = r.impression || '';
-    document.getElementById('edit-save-btn').dataset.id = id;
-    document.getElementById('edit-overlay').classList.add('open');
-  }
-
-  function closeEdit() {
-    document.getElementById('edit-overlay').classList.remove('open');
-  }
-
-  function toggleEditOrgOther() {
-    const val = document.getElementById('e-organizer').value;
-    document.getElementById('e-org-other-group').style.display = val === 'その他' ? 'block' : 'none';
-  }
-
-  async function saveEdit() {
-    const id = document.getElementById('edit-save-btn').dataset.id;
-    const organizer = document.getElementById('e-organizer').value === 'その他'
-      ? document.getElementById('e-organizer-other').value.trim()
-      : document.getElementById('e-organizer').value;
-    const eventName = document.getElementById('e-name').value.trim();
-    const played_at = document.getElementById('e-date').value;
-    if (!eventName || !played_at) { alert('イベント名と開催日は必須です'); return; }
-
-    const btn = document.getElementById('edit-save-btn');
-    btn.disabled = true;
-    btn.textContent = '保存中...';
-
-    const { error } = await sb.from('records').update({
-      title: organizer ? `【${organizer}】${eventName}` : eventName,
-      played_at,
-      location: document.getElementById('e-place').value.trim() || null,
-      difficulty: parseInt(document.getElementById('e-difficulty').value),
-      cleared: document.getElementById('e-result').value === 'true',
-      impression: document.getElementById('e-note').value.trim() || null,
-    }).eq('id', id);
-
-    btn.disabled = false;
-    btn.textContent = '保存する';
-
-    if (error) { alert('更新に失敗しました: ' + error.message); return; }
-    closeEdit();
-    renderHome();
-  }
-
-  // モーダル背景クリックで閉じる
-  document.getElementById('edit-overlay').addEventListener('click', e => {
-    if (e.target === document.getElementById('edit-overlay')) closeEdit();
-  });
-
-  async function deleteRecord(id) {
-    if (!confirm('この記録を削除しますか？')) return;
-    const { error } = await sb.from('records').delete().eq('id', id);
-    if (error) { alert('削除に失敗しました'); return; }
-    renderHome();
-  }
-
-  function switchTab(name) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    const idx = name === 'record' ? 0 : 1;
-    document.querySelectorAll('.tab-btn')[idx].classList.add('active');
-    document.getElementById('panel-' + name).classList.add('active');
-    window.scrollTo(0, 0);
-    if (name === 'list') renderList();
-  }
-
-  async function renderList() {
-    const el = document.getElementById('all-list');
-    el.innerHTML = '<div class="loading">読み込み中...</div>';
-
-    const { data: records, error } = await sb
-      .from('records')
-      .select('*')
-      .order('played_at', { ascending: false });
-
-    if (error) { el.innerHTML = '<div class="no-data">取得に失敗しました 🙏</div>'; return; }
-    if (!records.length) { el.innerHTML = '<div class="no-data">まだ記録がありません🌸</div>'; return; }
-
-    const cards2 = await Promise.all(records.map(async r => {
-      const imgUrl = await getImageUrl(r.title);
-      const dateShort = r.played_at ? r.played_at.slice(5).replace('-', '/') : '';
-      return `
-      <div class="list-card">
-        ${imgUrl ? `<img src="${escHtml(imgUrl)}" alt="">` : ''}
-        <div class="list-info">
-          <div class="list-title">${escHtml(r.title)}</div>
-          <div class="list-meta">
-            <span>📅 ${dateShort}</span>
-            ${r.location ? `<span>📍 ${escHtml(r.location)}</span>` : ''}
-            ${r.difficulty ? `<span>⭐ ${r.difficulty}</span>` : ''}
-            ${r.cleared ? '<span style="color:#2dba7a">✅ 成功</span>' : '<span style="color:#e05080">❌ 失敗</span>'}
-          </div>
-        </div>
-      </div>`;
-    }));
-    el.innerHTML = cards2.join('');
-  }
-
-  function escHtml(str) {
-    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  // --- 認証 ---
-  const AUTH_HASH = '79dc3b06bcce5bd682b17bfe0ffc59ed4ad319d9c5e633198674266c9adaaf34';
-  const AUTH_KEY  = 'cb_auth_v1';
-
-  async function sha256(str) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-  }
-
-  async function checkAuth() {
-    const val = document.getElementById('auth-input').value;
-    const hash = await sha256(val);
-    if (hash === AUTH_HASH) {
-      localStorage.setItem(AUTH_KEY, '1');
-      document.getElementById('auth-overlay').style.setProperty('display', 'none', 'important');
-    } else {
-      document.getElementById('auth-error').textContent = 'パスワードが違います';
-      document.getElementById('auth-input').value = '';
-      document.getElementById('auth-input').focus();
-    }
-  }
-  window.checkAuth = checkAuth;
-  
-  document.getElementById('auth-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') checkAuth();
-  });
-
-  if (localStorage.getItem(AUTH_KEY) === '1') {
-    document.getElementById('auth-overlay').style.setProperty('display', 'none', 'important');
-  }
-
-  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
-  renderHome();
+  // 追加: 画面初期ロード
   prefetchAll();
+  renderHome();
 </script>
 </body>
 </html>
