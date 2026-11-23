@@ -391,6 +391,50 @@
     .deco-dots span { width: 6px; height: 6px; border-radius: 50%; background: #ff8ec8; }
     .deco-dots span:nth-child(2) { background: #c77dff; }
     .deco-dots span:nth-child(3) { background: #7b9fff; }
+
+/* 記録一覧ページネーション */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 20px 0 25px;
+}
+
+.pagination button {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1.5px solid #ffd6ef;
+  border-radius: 10px;
+  background: #fff;
+  color: #b879cf;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.pagination button.active {
+  background: linear-gradient(135deg, #f77bc5, #c77dff);
+  color: white;
+  border-color: transparent;
+}
+
+.pagination button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  width: 100%;
+  text-align: center;
+  font-size: 0.78rem;
+  color: #b58ac5;
+  margin-top: 5px;
+}
+
+    
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -557,6 +601,7 @@
   <!-- 記録一覧 -->
   <div class="section-title">記録一覧</div>
   <div id="recent-list"></div>
+  <div id="recent-pagination" class="pagination"></div>
 
   <!-- 統計 -->
   <div class="stats-grid" style="margin-top:22px;margin-bottom:8px;">
@@ -584,6 +629,10 @@
 
 <script>
   let recordsCache = {};
+
+// 記録一覧のページ設定
+const RECENT_PAGE_SIZE = 5;
+let recentPage = 1;
   
   // — パスワード認証 —
 const EXPECTED_PASSWORD_HASH = '79dc3b06bcce5bd682b17bfe0ffc59ed4ad319d9c5e633198674266c9adaaf34';
@@ -706,10 +755,119 @@ function escHtml(value) {
         </div>
       </div>
     `}));
-      list.innerHTML = cards.join('');
-      allList.innerHTML = cards.join('');
+      // 全ページ数を計算
+const totalPages = Math.ceil(records.length / RECENT_PAGE_SIZE);
+
+// 現在のページが範囲外にならないようにする
+recentPage = Math.min(
+  Math.max(1, recentPage),
+  totalPages
+);
+
+// 現在のページに表示する記録を抽出
+const startIndex = (recentPage - 1) * RECENT_PAGE_SIZE;
+
+const pageCards = cards.slice(
+  startIndex,
+  startIndex + RECENT_PAGE_SIZE
+);
+
+// 記録タブには5件だけ表示
+list.innerHTML = pageCards.join('');
+
+// 一覧タブには全件表示
+const allList = document.getElementById('all-list');
+
+if (allList) {
+  allList.innerHTML = cards.join('');
+}
+
+// ページ切り替えボタン
+renderRecentPagination(records.length);
   }
 
+// ====================================
+// 記録一覧ページ切り替え
+// ====================================
+
+function renderRecentPagination(totalRecords) {
+
+  const container = document.getElementById('recent-pagination');
+
+  if (!container) return;
+
+  const totalPages = Math.ceil(
+    totalRecords / RECENT_PAGE_SIZE
+  );
+
+  // 1ページしかない場合はボタンを表示しない
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+
+  // 前へ
+  html += `
+    <button
+      onclick="changeRecentPage(${recentPage - 1})"
+      ${recentPage === 1 ? 'disabled' : ''}>
+      ‹
+    </button>
+  `;
+
+  // ページ番号
+  for (let i = 1; i <= totalPages; i++) {
+
+    html += `
+      <button
+        class="${i === recentPage ? 'active' : ''}"
+        onclick="changeRecentPage(${i})">
+        ${i}
+      </button>
+    `;
+  }
+
+  // 次へ
+  html += `
+    <button
+      onclick="changeRecentPage(${recentPage + 1})"
+      ${recentPage === totalPages ? 'disabled' : ''}>
+      ›
+    </button>
+  `;
+
+  html += `
+    <div class="pagination-info">
+      ${recentPage} / ${totalPages} ページ
+      （全 ${totalRecords} 件）
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+
+// ページ変更
+window.changeRecentPage = function(page) {
+
+  recentPage = page;
+
+  renderHome();
+
+  // 記録一覧の位置までスクロール
+  setTimeout(() => {
+    document.getElementById('recent-list')
+      .scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+  }, 100);
+
+};
+
+  
   // --- 団体別イベント取得設定 ---
   const ORG_SOURCES = {
     'SCRAP':      'https://api.scrapmagazine.com/public/api/2/events?_v=2',
