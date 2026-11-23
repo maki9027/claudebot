@@ -438,6 +438,57 @@
 #recent-list .record-impression {
   display: none;
 }
+
+/* 一覧検索エリア */
+.filter-card {
+  background: white;
+  border: 2px solid #ffd6ef;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 14px rgba(199,125,255,0.08);
+}
+
+.filter-title {
+  font-weight: 800;
+  color: #c077d0;
+  margin-bottom: 15px;
+}
+
+.filter-group {
+  margin-bottom: 12px;
+}
+
+.filter-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #c077d0;
+  margin-bottom: 5px;
+}
+
+.filter-reset {
+  width: 100%;
+  padding: 10px;
+  border: 1.5px solid #ffd6ef;
+  border-radius: 10px;
+  background: #fff5fb;
+  color: #b879cf;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.filter-reset:hover {
+  background: #ffe6f5;
+}
+
+.filter-count {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #b58ac5;
+  margin-top: 12px;
+}
     
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -627,8 +678,51 @@
 
 <div id="panel-list" class="tab-panel">
   <div class="main">
-    <div id="all-list"></div>
+
+  <!-- 一覧検索 -->
+  <div class="filter-card">
+
+    <div class="filter-title">🔍 記録を絞り込む</div>
+
+    <div class="filter-group">
+      <label>🏆 成功・失敗</label>
+      <select id="filter-result" onchange="applyAllListFilters()">
+        <option value="">すべて</option>
+        <option value="success">成功</option>
+        <option value="failure">失敗</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>🏢 団体名</label>
+      <select id="filter-organizer" onchange="applyAllListFilters()">
+        <option value="">すべての団体</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>⭐ 難易度</label>
+      <select id="filter-difficulty" onchange="applyAllListFilters()">
+        <option value="">すべて</option>
+        <option value="1">★☆☆☆☆ やさしい</option>
+        <option value="2">★★☆☆☆ 初級</option>
+        <option value="3">★★★☆☆ 中級</option>
+        <option value="4">★★★★☆ 上級</option>
+        <option value="5">★★★★★ 激難</option>
+      </select>
+    </div>
+
+    <button type="button" class="filter-reset" onclick="resetAllListFilters()">
+      条件をリセット
+    </button>
+
+    <div id="filter-count" class="filter-count"></div>
+
   </div>
+
+  <div id="all-list"></div>
+
+</div>
 </div>
 
 <script>
@@ -736,7 +830,11 @@ function escHtml(value) {
     const cards = await Promise.all(records.map(async r => {
       const imgUrl = await getImageUrl(r.title);
       return `
-      <div class="record-card">
+      <div class="record-card"
+  data-result="${r.cleared ? 'success' : 'failure'}"
+  data-organizer="${escHtml((String(r.title || '').match(/^【([^】]+)】/) || [])[1] || 'その他')}"
+  data-difficulty="${Number(r.difficulty) || ''}">
+  
         <div style="display:flex;gap:12px;align-items:flex-start;">
           <div style="flex:1;min-width:0;">
             <div class="title">
@@ -776,12 +874,19 @@ const pageCards = cards.slice(
   startIndex + RECENT_PAGE_SIZE
 );
 
+}
 // 記録タブには5件だけ表示
 list.innerHTML = pageCards.join('');
 
 // 一覧タブには全件表示
 if (allList) {
   allList.innerHTML = cards.join('');
+
+  // 団体名の選択肢を更新
+  updateOrganizerOptions(records);
+
+  // 検索条件を反映
+  applyAllListFilters();
 }
 
 // ページ切り替えボタン
@@ -1263,6 +1368,88 @@ window.changeRecentPage = function(page) {
     document.getElementById('panel-list').classList.toggle('active', tabName === 'list');
   }
 
+// ====================================
+// 一覧タブ検索・絞り込み機能
+// ====================================
+
+// 団体名の選択肢を記録から自動生成
+function updateOrganizerOptions(records) {
+
+  const select = document.getElementById('filter-organizer');
+
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  const organizers = [
+    ...new Set(
+      records.map(r => {
+        const match = String(r.title || '').match(/^【([^】]+)】/);
+        return match ? match[1] : 'その他';
+      })
+    )
+  ].sort();
+
+  select.innerHTML =
+    '<option value="">すべての団体</option>' +
+    organizers.map(org =>
+      `<option value="${escHtml(org)}">${escHtml(org)}</option>`
+    ).join('');
+
+  select.value = organizers.includes(currentValue)
+    ? currentValue
+    : '';
+}
+
+
+// 検索・絞り込み
+window.applyAllListFilters = function() {
+
+  const result = document.getElementById('filter-result').value;
+  const organizer = document.getElementById('filter-organizer').value;
+  const difficulty = document.getElementById('filter-difficulty').value;
+
+  const cards = document.querySelectorAll('#all-list .record-card');
+
+  let count = 0;
+
+  cards.forEach(card => {
+
+    const matchResult =
+      !result || card.dataset.result === result;
+
+    const matchOrganizer =
+      !organizer || card.dataset.organizer === organizer;
+
+    const matchDifficulty =
+      !difficulty || card.dataset.difficulty === difficulty;
+
+    const visible =
+      matchResult && matchOrganizer && matchDifficulty;
+
+    card.style.display = visible ? '' : 'none';
+
+    if (visible) count++;
+
+  });
+
+  document.getElementById('filter-count').textContent =
+    `${count} 件の記録が見つかりました`;
+
+};
+
+
+// 条件リセット
+window.resetAllListFilters = function() {
+
+  document.getElementById('filter-result').value = '';
+  document.getElementById('filter-organizer').value = '';
+  document.getElementById('filter-difficulty').value = '';
+
+  applyAllListFilters();
+
+};
+  
   // 追加: 画面初期ロード
   prefetchAll();
   renderHome();
