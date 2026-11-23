@@ -1467,17 +1467,6 @@ window.saveRecord = async function () {
     ? document.getElementById('f-organizer-other').value.trim()
     : org;
 
-  // 入力チェック
-  if (!eventName || !date) {
-    alert('イベント名と開催日を入力してください。');
-    return;
-  }
-
-  if (org === 'その他' && !orgName) {
-    alert('団体名を入力してください。');
-    return;
-  }
-
   const btn = document.getElementById('save-btn');
 
   // Supabaseに保存するデータ
@@ -1501,7 +1490,6 @@ window.saveRecord = async function () {
 
     if (error) {
       console.error('保存エラー:', error);
-      alert('保存に失敗しました。Consoleを確認してください。');
       return;
     }
 
@@ -1522,11 +1510,8 @@ window.saveRecord = async function () {
     // 記録一覧と統計を更新
     await renderHome();
 
-    alert('記録を保存しました！');
-
   } catch (e) {
     console.error('保存処理エラー:', e);
-    alert('予期しないエラーが発生しました。');
 
   } finally {
     btn.disabled = false;
@@ -1564,7 +1549,6 @@ window.openEdit = function (id) {
   const r = recordsCache[id];
 
   if (!r) {
-    alert('記録が見つかりません。再読み込みしてください。');
     return;
   }
 
@@ -1619,16 +1603,6 @@ window.saveEdit = async function () {
     ? document.getElementById('e-organizer-other').value.trim()
     : org;
 
-  if (!eventName || !date) {
-    alert('イベント名と開催日を入力してください。');
-    return;
-  }
-
-  if (org === 'その他' && !orgName) {
-    alert('団体名を入力してください。');
-    return;
-  }
-
   const payload = {
     title: `${orgName ? `【${orgName}】` : ''}${eventName}`,
     played_at: date,
@@ -1650,8 +1624,6 @@ window.saveEdit = async function () {
 
     if (error) throw error;
 
-    alert('編集内容を保存しました');
-
     window.closeEdit();
 
     await renderHome();
@@ -1659,9 +1631,7 @@ window.saveEdit = async function () {
   } catch (error) {
 
     console.error('編集エラー:', error);
-
-    alert('編集に失敗しました');
-
+    
   } finally {
 
     btn.disabled = false;
@@ -1687,15 +1657,11 @@ window.deleteRecord = async function (id) {
 
     if (error) throw error;
 
-    alert('記録を削除しました');
-
     await renderHome();
 
   } catch (error) {
 
     console.error('削除エラー:', error);
-
-    alert('削除に失敗しました');
 
   }
 };
