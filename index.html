@@ -1182,6 +1182,172 @@ window.saveRecord = async function () {
     btn.textContent = '記録を保存する';
   }
 };
+
+// ========================================
+// 記録の編集・削除機能
+// ========================================
+
+// 団体名「その他」の入力欄切り替え
+window.toggleEditOrgOther = function () {
+  const isOther =
+    document.getElementById('e-organizer').value === 'その他';
+
+  document.getElementById('e-org-other-group').style.display =
+    isOther ? 'block' : 'none';
+};
+
+
+// 編集画面を閉じる
+window.closeEdit = function () {
+  document.getElementById('edit-overlay').classList.remove('open');
+
+  const btn = document.getElementById('edit-save-btn');
+  btn.disabled = false;
+  btn.textContent = '保存する';
+};
+
+
+// 編集画面を開く
+window.openEdit = function (id) {
+
+  const r = recordsCache[id];
+
+  if (!r) {
+    alert('記録が見つかりません。再読み込みしてください。');
+    return;
+  }
+
+  // 団体名とイベント名を分離
+  const match = String(r.title || '').match(/^【([^】]+)】(.*)$/);
+
+  const organizer = match ? match[1] : 'その他';
+  const eventName = match ? match[2] : String(r.title || '');
+
+  const select = document.getElementById('e-organizer');
+
+  const known = [...select.options].some(
+    option => option.value === organizer
+  );
+
+  select.value = known ? organizer : 'その他';
+
+  document.getElementById('e-organizer-other').value =
+    known ? '' : organizer;
+
+  window.toggleEditOrgOther();
+
+  document.getElementById('e-name').value = eventName;
+  document.getElementById('e-date').value = r.played_at || '';
+  document.getElementById('e-place').value = r.location || '';
+  document.getElementById('e-difficulty').value = String(r.difficulty || 3);
+  document.getElementById('e-result').value = String(!!r.cleared);
+  document.getElementById('e-note').value = r.impression || '';
+
+  document.getElementById('edit-save-btn').dataset.id = id;
+
+  document.getElementById('edit-overlay').classList.add('open');
+};
+
+
+// 編集内容を保存
+window.saveEdit = async function () {
+
+  const btn = document.getElementById('edit-save-btn');
+  const id = btn.dataset.id;
+
+  const eventName =
+    document.getElementById('e-name').value.trim();
+
+  const date =
+    document.getElementById('e-date').value;
+
+  const org =
+    document.getElementById('e-organizer').value;
+
+  const orgName = org === 'その他'
+    ? document.getElementById('e-organizer-other').value.trim()
+    : org;
+
+  if (!eventName || !date) {
+    alert('イベント名と開催日を入力してください。');
+    return;
+  }
+
+  if (org === 'その他' && !orgName) {
+    alert('団体名を入力してください。');
+    return;
+  }
+
+  const payload = {
+    title: `${orgName ? `【${orgName}】` : ''}${eventName}`,
+    played_at: date,
+    location: document.getElementById('e-place').value.trim(),
+    difficulty: Number(document.getElementById('e-difficulty').value),
+    cleared: document.getElementById('e-result').value === 'true',
+    impression: document.getElementById('e-note').value.trim()
+  };
+
+  try {
+
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    const { error } = await sb
+      .from('records')
+      .update(payload)
+      .eq('id', id);
+
+    if (error) throw error;
+
+    alert('編集内容を保存しました');
+
+    window.closeEdit();
+
+    await renderHome();
+
+  } catch (error) {
+
+    console.error('編集エラー:', error);
+
+    alert('編集に失敗しました');
+
+  } finally {
+
+    btn.disabled = false;
+    btn.textContent = '保存する';
+
+  }
+};
+
+
+// 記録を削除
+window.deleteRecord = async function (id) {
+
+  if (!confirm('この記録を削除しますか？')) {
+    return;
+  }
+
+  try {
+
+    const { error } = await sb
+      .from('records')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    alert('記録を削除しました');
+
+    await renderHome();
+
+  } catch (error) {
+
+    console.error('削除エラー:', error);
+
+    alert('削除に失敗しました');
+
+  }
+};
   
 </script>
 </body>
