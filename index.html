@@ -434,6 +434,10 @@
   margin-top: 5px;
 }
 
+/* 記録タブでは感想・メモを非表示 */
+#recent-list .record-impression {
+  display: none;
+}
     
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -745,7 +749,7 @@ function escHtml(value) {
               ${r.difficulty ? `<span>⭐ 難易度 ${r.difficulty}</span>` : ''}
             </div>
             <div class="difficulty-bar"><div class="fill" style="width:${(r.difficulty||0)*20}%"></div></div>
-            ${r.impression ? `<div style="margin-top:9px;font-size:0.82rem;color:#a080b0;">${escHtml(r.impression)}</div>` : ''}
+            ${r.impression ? `<div class="record-impression" style="margin-top:9px;font-size:0.82rem;color:#a080b0;">${escHtml(r.impression)}</div>` : ''}
           </div>
           ${imgUrl ? `<img src="${escHtml(imgUrl)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;flex-shrink:0;border:2px solid #ffd6ef;">` : ''}
         </div>
