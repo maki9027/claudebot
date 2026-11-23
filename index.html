@@ -551,7 +551,7 @@
       <label>💬 感想・メモ</label>
       <textarea id="f-note" placeholder="難しかった謎、印象に残ったことなど..."></textarea>
     </div>
-    <button class="btn" id="save-btn" onclick="saveRecord()">記録を保存する</button>
+    <button class="btn" id="save-btn" onclick="window.saveRecord()">記録を保存する</button>
   </div>
 
   <!-- 記録一覧 -->
@@ -1102,6 +1102,87 @@ function escHtml(value) {
   // 追加: 画面初期ロード
   prefetchAll();
   renderHome();
+
+  // ====================================
+// 記録保存処理
+// ====================================
+window.saveRecord = async function () {
+
+  const eventName = document.getElementById('f-name').value.trim();
+  const date = document.getElementById('f-date').value;
+
+  const org = document.getElementById('f-organizer').value;
+  const orgName = org === 'その他'
+    ? document.getElementById('f-organizer-other').value.trim()
+    : org;
+
+  // 入力チェック
+  if (!eventName || !date) {
+    alert('イベント名と開催日を入力してください。');
+    return;
+  }
+
+  if (org === 'その他' && !orgName) {
+    alert('団体名を入力してください。');
+    return;
+  }
+
+  const btn = document.getElementById('save-btn');
+
+  // Supabaseに保存するデータ
+  const payload = {
+    title: `${orgName ? `【${orgName}】` : ''}${eventName}`,
+    played_at: date,
+    location: document.getElementById('f-place').value.trim(),
+    difficulty: Number(document.getElementById('f-difficulty').value),
+    cleared: document.getElementById('f-result').value === 'true',
+    impression: document.getElementById('f-note').value.trim()
+  };
+
+  try {
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    // Supabaseに新規記録を追加
+    const { error } = await sb
+      .from('records')
+      .insert(payload);
+
+    if (error) {
+      console.error('保存エラー:', error);
+      alert('保存に失敗しました。Consoleを確認してください。');
+      return;
+    }
+
+    // イベント画像があれば保存
+    if (pendingImageUrl) {
+      await saveImageUrl(eventName, pendingImageUrl);
+    }
+
+    // 入力欄を初期化
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-date').value = '';
+    document.getElementById('f-note').value = '';
+
+    pendingImageUrl = null;
+
+    hideSuggestions();
+
+    // 記録一覧と統計を更新
+    await renderHome();
+
+    alert('記録を保存しました！');
+
+  } catch (e) {
+    console.error('保存処理エラー:', e);
+    alert('予期しないエラーが発生しました。');
+
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '記録を保存する';
+  }
+};
+  
 </script>
 </body>
 </html>
